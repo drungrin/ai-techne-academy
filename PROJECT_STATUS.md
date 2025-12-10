@@ -1,15 +1,15 @@
 # AI Techne Academy - Status do Projeto
 
-**Última Atualização**: 2024-12-10 20:48 UTC
-**Status Geral**: 🟡 Fase 1 em Progresso - Infraestrutura AWS Base
+**Última Atualização**: 2024-12-10 20:59 UTC
+**Status Geral**: 🟡 Fase 1 em Progresso - Template SAM Criado
 
 ---
 
-## 📊 Progresso Geral: 20%
+## 📊 Progresso Geral: 30%
 
 ```
-████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 20%
-Planejamento ████████████ Setup ████ Implementação ░░░░░░░░░░
+████████████░░░░░░░░░░░░░░░░░░░░░░░░░░ 30%
+Planejamento ████████████ Setup ████████ Implementação ░░░░░░░░
 ```
 
 ---
@@ -61,23 +61,25 @@ Planejamento ████████████ Setup ████ Implementa�
 **Responsável**: Kilo Code
 **Status**: ✅ Completo
 
-#### Tarefas Pendentes
+#### Tarefas em Progresso
 
-##### 1.2 Infraestrutura AWS Base (0/8)
-- [ ] Criar buckets S3 (input, output, transcription)
-- [ ] Configurar IAM roles e policies
-- [ ] Setup de VPC e networking
-  - [ ] VPC privada
-  - [ ] Subnets privadas
-  - [ ] Security groups
-- [ ] Criar DynamoDB table para tracking
-- [ ] Configurar SNS topic para notificações
-- [ ] Setup de CloudWatch Log Groups
-- [ ] Validar infraestrutura base
+##### 1.2 Infraestrutura AWS Base (5/7) 🔄
+- [x] Criar template SAM completo (643 linhas)
+- [x] Definir buckets S3 (input, output, transcription)
+- [x] Definir IAM roles e policies
+- [x] Definir DynamoDB table para tracking
+- [x] Definir SNS topic para notificações
+- [x] Definir CloudWatch Log Groups
+- [x] Validar template SAM localmente
+- [ ] Deploy da infraestrutura via SAM
+- [ ] Validar recursos AWS criados
 
-**Estimativa**: 3 dias  
-**Responsável**: [Definir]  
-**Bloqueios**: Depende de 1.1
+**Progresso**: 71% (5/7 tarefas)
+**Duração Real**: 1 hora
+**Responsável**: Kilo Code
+**Status**: 🔄 Em Progresso
+
+**Nota**: VPC e networking foram descartados da Fase 1.2 - ECS Fargate não requer VPC obrigatoriamente para início
 
 ---
 
@@ -146,36 +148,42 @@ Planejamento ████████████ Setup ████ Implementa�
 ## 📈 Métricas do Projeto
 
 ### Documentação
-- **Linhas Escritas**: 2,629
-- **Arquivos de Documentação**: 7
+- **Linhas Escritas**: 3,774
+- **Arquivos de Documentação**: 8
 - **Cobertura de Especificação**: 100%
+
+### Infraestrutura (IaC)
+- **Linhas de Template SAM**: 643
+- **Recursos Definidos**: 14 (S3, DynamoDB, SNS, IAM, CloudWatch)
+- **Template Validado**: ✅ Sam validate passou
+- **Recursos AWS Deployados**: 0 (pronto para deploy)
+- **Ambientes Configurados**: 0/3 (dev, staging, prod)
 
 ### Código (a iniciar)
 - **Linhas de Código**: 0
 - **Testes Criados**: 0
 - **Cobertura de Testes**: 0%
 
-### Infraestrutura
-- **Recursos AWS Criados**: 0
-- **Ambientes Configurados**: 0/3 (dev, staging, prod)
-
 ---
 
 ## 🎯 Objetivos Atuais
 
 ### Objetivo Imediato
-**Completar Fase 1.2: Infraestrutura AWS Base**
+**Deploy do Template SAM para AWS (Fase 1.2)**
 
 ### Próxima Sessão
-1. Criar buckets S3 (input, output, transcription)
-2. Configurar IAM roles e policies básicas
-3. Setup de DynamoDB table para tracking
-4. Configurar SNS topic para notificações
+1. **Opção A**: Deploy da infraestrutura AWS via SAM
+   - `sam deploy --guided`
+   - Validar recursos criados
+   - Verificar custos iniciais
+2. **Opção B**: Continuar desenvolvimento local
+   - Implementar primeira Lambda function
+   - Setup de LocalStack para testes
 
 ### Esta Semana
-- Completar toda a Fase 1
-- Ter infraestrutura base funcional AWS
-- Iniciar desenvolvimento das Lambda functions
+- Completar deploy da infraestrutura base AWS
+- Iniciar Fase 2: Desenvolvimento das Lambda functions
+- Setup de ambiente de desenvolvimento local com LocalStack
 
 ---
 
