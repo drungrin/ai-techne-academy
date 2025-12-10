@@ -1,7 +1,7 @@
 # AI Techne Academy - Status do Projeto
 
-**Última Atualização**: 2024-12-10 18:32 UTC
-**Status Geral**: 🟡 Fase 1 em Progresso - Setup Inicial
+**Última Atualização**: 2024-12-10 20:48 UTC
+**Status Geral**: 🟡 Fase 1 em Progresso - Infraestrutura AWS Base
 
 ---
 
@@ -46,9 +46,10 @@ Planejamento ████████████ Setup ████ Implementa�
 
 #### Tarefas Completadas
 
-##### 1.1 Setup de Repositório e Ambiente (5/5) ✅
-- [x] Criar repositório no GitHub (manual)
-- [x] Configurar branch protection rules (manual)
+##### 1.1 Setup de Repositório e Ambiente (6/6) ✅
+- [x] Criar repositório no GitHub (git@github.com:drungrin/ai-techne-academy.git)
+- [x] Push de 3 commits iniciais para branch main
+- [x] Configurar remote origin
 - [x] Setup de ambiente de desenvolvimento local
   - [x] Docker Desktop
   - [x] AWS SAM CLI v1.150.1
@@ -261,7 +262,7 @@ Hoje: ↑ (Início da Semana 1)
 ### Canais de Comunicação
 - **Slack**: #ai-techne-academy-dev
 - **Email**: devops@example.com
-- **GitHub**: [Definir URL]
+- **GitHub**: https://github.com/drungrin/ai-techne-academy
 
 ### Reuniões
 - **Daily Standup**: [Definir horário]
