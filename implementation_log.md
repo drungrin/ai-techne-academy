@@ -461,6 +461,171 @@ Este arquivo documenta cronologicamente todo o progresso do projeto.
 - [GitHub Repository](https://github.com/drungrin/ai-techne-academy)
 
 ---
+## 2024-12-10 - Sessão 4: Deploy AWS e Validação da Infraestrutura
+
+### ✅ Completado
+
+#### Deploy de Infraestrutura AWS
+- [x] **CloudFormation Stack deployada com sucesso** (`ai-techne-academy-dev`)
+  - Status: CREATE_COMPLETE
+  - Tempo de deploy: ~1 minuto
+  - Região: us-east-1
+  - Account ID: 615934053793
+
+#### Recursos AWS Criados e Validados
+- [x] **3 S3 Buckets** - Todos criados e funcionando
+  - `ai-techne-academy-input-dev-615934053793`
+  - `ai-techne-academy-output-dev-615934053793`
+  - `ai-techne-academy-transcripts-dev-615934053793`
+
+- [x] **1 DynamoDB Table** - ACTIVE
+  - Nome: `ai-techne-academy-tracking-dev`
+  - Billing: Pay-per-request
+  - Streams: Enabled
+  - Point-in-Time Recovery: Enabled
+
+- [x] **1 SNS Topic** - Criado
+  - ARN: `arn:aws:sns:us-east-1:615934053793:ai-techne-academy-notifications-dev`
+  - Subscription: email (PendingConfirmation)
+  - Email: devops@techne.com.br
+
+- [x] **3 CloudWatch Log Groups** - Todos criados
+  - `/aws/lambda/ai-techne-academy-dev`
+  - `/aws/vendedlogs/states/ai-techne-academy-dev`
+  - `/ecs/ai-techne-academy-processor-dev`
+
+- [x] **3 IAM Roles** - Todas criadas
+  - `ai-techne-academy-lambda-execution-dev`
+  - `ai-techne-academy-ecs-execution-dev`
+  - `ai-techne-academy-ecs-task-dev`
+
+#### Validações Realizadas
+- [x] Stack status: CREATE_COMPLETE ✅
+- [x] S3 buckets listados via AWS CLI ✅
+- [x] DynamoDB table ACTIVE ✅
+- [x] SNS topic criado (subscrição pendente) ✅
+- [x] IAM roles criadas ✅
+- [x] CloudWatch log groups criados ✅
+
+### 📊 Métricas
+- **Recursos AWS Deployados**: 13/13 (100%)
+- **Tempo de Deploy**: ~1 minuto
+- **Comandos Executados**: 6 validações via AWS CLI
+- **Stack CloudFormation**: 1 (ai-techne-academy-dev)
+- **Custo Estimado**: $2-3/mês (ambiente dev)
+
+### 🎯 Status Atual
+- **Fase Atual**: 1.2 - ✅ COMPLETO (100%)
+- **Fase 1**: ✅ COMPLETA (100%)
+- **Progresso Geral**: 50% (de 30% para 50%)
+- **Próxima Fase**: 2.1 (Lambda Functions)
+- **Bloqueios**: Nenhum
+- **Risco**: Baixo
+
+### 🚀 Próximos Passos
+
+#### Imediato (Próxima Sessão)
+1. **Confirmar subscrição SNS**
+   - Checar email devops@techne.com.br
+   - Confirmar subscrição no link recebido
+
+2. **Implementar primeira Lambda Function (Trigger)**
+   - Criar `src/functions/trigger/app.py`
+   - Função que responde a upload S3
+   - Validar tipo de arquivo (mp4, mov, avi)
+   - Extrair metadados do vídeo
+   - Iniciar Step Functions execution
+
+3. **Setup de desenvolvimento local**
+   - Configurar SAM Local para testes
+   - Criar testes unitários básicos
+
+#### Curto Prazo (Esta Semana)
+- Implementar 3 Lambda functions completas
+- Testes locais com SAM Local
+- Preparar para Fase 2.2 (Processador ECS)
+
+#### Médio Prazo (Próximas 2 Semanas)
+- Fase 2.2: Desenvolver processador ECS
+- Fase 2.3: Containerização (Dockerfile, ECR)
+- Fase 3.1: Step Functions State Machine
+
+### 📝 Notas Importantes
+
+#### Decisões Tomadas
+- **Opção A escolhida**: Deploy AWS imediato (vs desenvolvimento local)
+  - Infraestrutura real permite validação antecipada
+  - Custo baixo justifica deploy early
+  - Facilita testes integrados na Fase 2
+
+#### Recursos Deployados
+Todos os outputs do CloudFormation estão disponíveis:
+```
+InputBucketName: ai-techne-academy-input-dev-615934053793
+OutputBucketName: ai-techne-academy-output-dev-615934053793
+TranscriptionBucketName: ai-techne-academy-transcripts-dev-615934053793
+TrackingTableName: ai-techne-academy-tracking-dev
+NotificationTopicArn: arn:aws:sns:us-east-1:615934053793:ai-techne-academy-notifications-dev
+LambdaExecutionRoleArn: arn:aws:iam::615934053793:role/ai-techne-academy-lambda-execution-dev
+ECSTaskExecutionRoleArn: arn:aws:iam::615934053793:role/ai-techne-academy-ecs-execution-dev
+ECSTaskRoleArn: arn:aws:iam::615934053793:role/ai-techne-academy-ecs-task-dev
+```
+
+#### Custo Real (Primeira Hora)
+- **S3**: $0 (sem dados ainda)
+- **DynamoDB**: $0 (sem operações)
+- **CloudWatch**: $0 (sem logs)
+- **SNS**: $0 (sem publicações)
+- **Total**: $0 (custos começam após uso)
+
+**Custo Estimado Mensal**: $2-3/mês com uso mínimo
+
+#### Contexto para Próximas Sessões
+- ✅ Infraestrutura AWS 100% deployada e validada
+- ✅ Fase 1 completa (Setup Inicial)
+- 📧 Aguardando confirmação de subscrição SNS
+- 🚀 Pronto para iniciar Fase 2 (Desenvolvimento Core)
+- 📊 Progresso geral: 50%
+
+#### Validações AWS CLI Executadas
+```bash
+# Stack status
+aws cloudformation describe-stacks --stack-name ai-techne-academy-dev
+
+# S3 buckets
+aws s3 ls | grep ai-techne-academy
+
+# DynamoDB table
+aws dynamodb describe-table --table-name ai-techne-academy-tracking-dev
+
+# SNS topic e subscription
+aws sns list-topics
+aws sns list-subscriptions-by-topic --topic-arn ...
+
+# IAM roles
+aws iam list-roles --query 'Roles[?contains(RoleName, `ai-techne-academy`)]'
+
+# CloudWatch log groups
+aws logs describe-log-groups
+```
+
+#### Lembretes
+- ✅ Email de confirmação SNS foi enviado para devops@techne.com.br
+- 📊 Monitorar custos diariamente na primeira semana
+- 🔒 Recursos seguem AWS best practices (encryption, least privilege)
+- 📝 PROJECT_STATUS.md atualizado para refletir progresso
+- 🎯 Próxima fase: Implementação de Lambda functions
+
+### 🔗 Links Importantes
+- [Template SAM](./infrastructure/template.yaml)
+- [CloudFormation Console](https://console.aws.amazon.com/cloudformation)
+- [S3 Console](https://console.aws.amazon.com/s3)
+- [DynamoDB Console](https://console.aws.amazon.com/dynamodb)
+- [Status do Projeto](./PROJECT_STATUS.md)
+- [GitHub Repository](https://github.com/drungrin/ai-techne-academy)
+
+---
+
 
 
 ## Template para Próximas Entradas
