@@ -9,7 +9,7 @@
   },
   {
     "ParameterKey": "NotificationEmail",
-    "ParameterValue": "devops@techne.com.br"
+    "ParameterValue": "michel.moreira@cronapp.io"
   },
   {
     "ParameterKey": "InputBucketRetentionDays",
