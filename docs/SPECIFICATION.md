@@ -373,7 +373,7 @@ ai-techne-academy/
 FROM python:3.12-slim
 
 # Metadados
-LABEL maintainer="your-team@example.com"
+LABEL maintainer="your-team@techne.com.br"
 LABEL description="Video processor for training document generation"
 
 WORKDIR /app
@@ -2347,7 +2347,7 @@ CostBudget:
           Threshold: 80
         Subscribers:
           - SubscriptionType: EMAIL
-            Address: devops@example.com
+            Address: devops@techne.com.br
 ```
 
 ---

@@ -57,7 +57,7 @@ def upload_video(video_path: str, bucket: str = 'video-processing-input-prod'):
         Key=s3_key,
         ExtraArgs={
             'Metadata': {
-                'uploaded_by': 'user@example.com',
+                'uploaded_by': 'user@techne.com.br',
                 'source': 'api',
                 'processing_priority': 'normal'
             }

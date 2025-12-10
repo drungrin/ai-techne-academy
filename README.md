@@ -325,7 +325,7 @@ Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICEN
 
 ## 📞 Suporte
 
-- **Email**: devops@example.com
+- **Email**: devops@techne.com.br
 - **Slack**: #ai-techne-academy
 - **Issues**: [GitHub Issues](https://github.com/your-org/ai-techne-academy/issues)
 

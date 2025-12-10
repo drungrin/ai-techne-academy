@@ -261,7 +261,7 @@ Hoje: ↑ (Início da Semana 1)
 
 ### Canais de Comunicação
 - **Slack**: #ai-techne-academy-dev
-- **Email**: devops@example.com
+- **Email**: devops@techne.com.br
 - **GitHub**: https://github.com/drungrin/ai-techne-academy
 
 ### Reuniões
