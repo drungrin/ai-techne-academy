@@ -1,0 +1,2 @@
+# Trigger Lambda Function
+This directory will contain the Lambda function that triggers the workflow when a video is uploaded to S3.

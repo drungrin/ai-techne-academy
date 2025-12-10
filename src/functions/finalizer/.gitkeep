@@ -1,0 +1,2 @@
+# Finalizer Lambda Function
+This directory will contain the Lambda function that finalizes the workflow and sends notifications.
