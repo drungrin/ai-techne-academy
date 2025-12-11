@@ -2670,3 +2670,184 @@ Scan on Push: Enabled
 **Duração da Sessão**: ~2 horas  
 **Próxima Ação**: Configurar SubnetId e Deploy em dev
 ---
+
+
+## 2024-12-11 - Sessão 13: Deploy em Dev e Preparação para Testes
+
+### ✅ Completado
+
+#### Configuração e Deploy
+- [x] **SubnetId Configurado**
+  - Script `setup-subnet.sh` executado
+  - Subnet pública detectada: subnet-f1e2f1de
+  - Parameters file atualizado automaticamente
+
+- [x] **Build com Containers**
+  - Comando: `sam build --use-container`
+  - Build bem-sucedido para 3 Lambda Functions
+  - Artifacts gerados em `.aws-sam/build/`
+
+- [x] **Deploy da Stack Atualizada**
+  - Stack: ai-techne-academy-dev (UPDATE_COMPLETE)
+  - 7 novos recursos adicionados:
+    - 1 CloudWatch Dashboard
+    - 6 CloudWatch Alarms
+  - Total de recursos: 32
+  - Total de outputs: 44
+  - Bucket S3 gerenciado: aws-sam-cli-managed-default-samclisourcebucket-5fz2wbucdmwo
+
+#### Monitoramento Validado
+- [x] **CloudWatch Alarms** - Todos no estado OK:
+  - ai-techne-academy-high-failure-rate-dev
+  - ai-techne-academy-lambda-errors-dev
+  - ai-techne-academy-lambda-throttles-dev
+  - ai-techne-academy-dlq-messages-dev
+  - ai-techne-academy-ecs-task-failure-dev
+  - ai-techne-academy-high-cost-dev
+
+- [x] **CloudWatch Dashboard**
+  - Nome: ai-techne-academy-dev
+  - Size: 1827 bytes
+  - Last Modified: 2024-12-11 18:21:36 UTC
+  - 5 widgets configurados
+
+#### Documentação Criada
+- [x] **QUICK_START.md** (200 linhas)
+  - Guia rápido de deploy
+  - Comandos para build com `--use-container`
+  - Instruções de teste end-to-end
+  - Troubleshooting comum
+  - Links para console AWS
+
+- [x] **PROJECT_STATUS.md Atualizado**
+  - Progresso: 95% → 98%
+  - Status: "Deployado em Dev - Pronto para Testes"
+  - Métricas atualizadas: 32 recursos, 1,286 linhas SAM
+  - Objetivos atualizados: Foco em testes E2E
+
+### 📊 Métricas
+
+#### Deploy
+- **Tempo Total**: ~15 minutos
+- **Recursos Criados**: 7 novos (1 dashboard + 6 alarms)
+- **Recursos Totais**: 32
+- **Outputs**: 44
+- **Linhas Template SAM**: 1,286
+
+#### Validações
+- ✅ Template SAM validado
+- ✅ Build com containers bem-sucedido
+- ✅ Deploy UPDATE_COMPLETE
+- ✅ Dashboard criado
+- ✅ 6 alarmes criados e OK
+- ✅ Documentação atualizada
+
+### 🎯 Status Atual
+
+- **Progresso Geral**: 98% (de 95% para 98%)
+- **Fase Atual**: Fase 3 ✅ Completa + Deploy Dev ✅
+- **Próxima Fase**: Testes End-to-End (Fase 4)
+- **Bloqueios**: 0
+- **Risco**: 🟢 Baixo
+
+### 🚀 Próximos Passos
+
+#### Imediato (Continuar Agora)
+1. **Teste End-to-End Básico**
+   - Upload vídeo pequeno (1-2 min) no S3
+   - Monitorar execução Step Functions
+   - Validar documento gerado
+   - Verificar notificações SNS
+   - Checar métricas no Dashboard
+
+2. **Solicitação Quota Bedrock**
+   - Acessar AWS Service Quotas
+   - Solicitar aumento:
+     - Requests: 50/min → 100/min
+     - Tokens: 500K/min → 1M/min
+   - Justificativa: Processamento de vídeos longos (3h)
+
+#### Curto Prazo (Esta Semana)
+- Testes com vídeos de diferentes tamanhos
+- Ajustes baseados em resultados
+- Validação completa do pipeline
+- Documentação operacional
+
+### 📝 Notas Importantes
+
+#### Decisões Técnicas
+
+**Build com Containers**:
+- Decisão: Sempre usar `--use-container`
+- Razão: Evita problemas com Python/pip local
+- Documentado em QUICK_START.md
+- Comando: `sam build --template infrastructure/template.yaml --use-container`
+
+**Deploy com --resolve-s3**:
+- Bucket gerenciado automaticamente criado
+- aws-sam-cli-managed-default-samclisourcebucket-5fz2wbucdmwo
+- Simplifica processo de deploy
+
+#### Recursos AWS Deployados
+
+**CloudWatch Dashboard**: `ai-techne-academy-dev`
+- Step Functions Executions (Started, Succeeded, Failed, TimedOut)
+- Lambda Functions (Invocations, Errors, Throttles)
+- ECS Task Utilization (CPU%, Memory%)
+- DLQ Messages (Visible messages)
+- Processing Results (Success, Failure, Partial - stacked)
+
+**CloudWatch Alarms** (6):
+1. HighFailureRateAlarm - >3 falhas em 5min
+2. LambdaErrorAlarm - >5 erros em 5min
+3. LambdaThrottleAlarm - >=1 throttle em 5min
+4. DLQMessagesAlarm - >=1 mensagem no DLQ
+5. ECSTaskFailureAlarm - >=1 falha ECS
+6. HighCostAlarm - >$10/hora
+
+#### Contexto para Próximas Sessões
+
+- ✅ Stack deployada e validada em dev
+- ✅ Dashboard operacional
+- ✅ 6 alarmes configurados e OK
+- ✅ Documentação quick start criada
+- 📊 Progresso: 98%
+- 🎯 Próximo: Teste end-to-end com vídeo real
+- ⏳ Aguarda: Quota Bedrock (opcional, circuit breaker protege)
+
+#### Comandos Úteis Documentados
+
+**Deploy**:
+```bash
+sam build --template infrastructure/template.yaml --use-container
+sam deploy --template-file .aws-sam/build/template.yaml \
+  --stack-name ai-techne-academy-dev \
+  --parameter-overrides Environment=dev ... \
+  --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+  --region us-east-1 --resolve-s3
+```
+
+**Validação**:
+```bash
+# Alarmes
+aws cloudwatch describe-alarms --query 'MetricAlarms[].{Name:AlarmName,State:StateValue}'
+
+# Dashboard
+aws cloudwatch list-dashboards
+
+# Outputs da Stack
+aws cloudformation describe-stacks --stack-name ai-techne-academy-dev
+```
+
+### 🔗 Links Importantes
+
+- [Quick Start Guide](./QUICK_START.md)
+- [Project Status](./PROJECT_STATUS.md)
+- [CloudWatch Dashboard](https://console.aws.amazon.com/cloudwatch/dashboards)
+- [Step Functions Console](https://console.aws.amazon.com/states/home)
+
+---
+
+**Atualizado Por**: Kilo Code (Code Mode)  
+**Duração da Sessão**: ~20 minutos  
+**Próxima Ação**: Teste end-to-end com vídeo real
