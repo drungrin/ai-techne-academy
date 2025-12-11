@@ -449,6 +449,59 @@ Resources:
           Value: !Ref Environment
         - Key: ManagedBy
           Value: SAM
+
+  # ========================================
+  # ECR Repository for Processor Container
+  # ========================================
+  
+  ProcessorRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Sub '${ProjectName}/processor'
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      ImageTagMutability: MUTABLE
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Expire untagged images older than 7 days",
+                "selection": {
+                  "tagStatus": "untagged",
+                  "countType": "sinceImagePushed",
+                  "countUnit": "days",
+                  "countNumber": 7
+                },
+                "action": {
+                  "type": "expire"
+                }
+              },
+              {
+                "rulePriority": 2,
+                "description": "Keep last 5 images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 5
+                },
+                "action": {
+                  "type": "expire"
+                }
+              }
+            ]
+          }
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: SAM
+        - Key: Component
+          Value: Processor
+
   # ========================================
   # Lambda Functions
   # ========================================
@@ -674,6 +727,23 @@ Outputs:
     Value: !GetAtt ECSTaskRole.Arn
     Export:
       Name: !Sub '${AWS::StackName}-ECSTaskRole'
+
+  # ECR Repository
+  ProcessorRepositoryUri:
+    Description: URI of the ECR repository for processor container
+    Value: !GetAtt ProcessorRepository.RepositoryUri
+    Export:
+      Name: !Sub '${AWS::StackName}-ProcessorRepositoryUri'
+
+  ProcessorRepositoryArn:
+    Description: ARN of the ECR repository
+    Value: !GetAtt ProcessorRepository.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ProcessorRepositoryArn'
+
+  ProcessorRepositoryName:
+    Description: Name of the ECR repository
+    Value: !Ref ProcessorRepository
 
   # Stack Info
   StackName:

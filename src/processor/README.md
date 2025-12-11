@@ -404,44 +404,162 @@ python main.py "$(cat test-event.json)"
 
 ## Deploy
 
-### Docker Build
+### 🐳 Docker
 
-```dockerfile
-FROM public.ecr.aws/lambda/python:3.12
+O processador é containerizado usando Docker multi-stage build para otimização de tamanho e performance.
 
-WORKDIR /app
+#### Dockerfile
 
-# Install system dependencies (pandoc not needed with python-docx)
-RUN yum update -y && yum clean all
+O [`Dockerfile`](./Dockerfile) implementa:
+- ✅ Multi-stage build (builder + runtime)
+- ✅ Python 3.12 slim
+- ✅ Otimização de camadas com cache
+- ✅ Imagem final ~200-300MB
 
-# Copy requirements and install
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+#### Build Local
 
-# Copy source code
-COPY . .
-
-# Set Python path
-ENV PYTHONPATH=/app
-
-# Entry point
-CMD ["main.lambda_handler"]
-```
-
-### Build e Push
+Use o script automatizado:
 
 ```bash
-# Build
-docker build -t processor:latest .
+# Build da imagem
+./scripts/build-processor.sh
 
-# Tag
-docker tag processor:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/processor:latest
+# Ou manualmente
+cd src/processor
+docker build -t ai-techne-processor:latest .
+```
 
-# Push to ECR
-aws ecr get-login-password --region us-east-1 | \
-  docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
+#### Desenvolvimento Local com Docker Compose
 
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/processor:latest
+O [`docker-compose.yml`](./docker-compose.yml) fornece ambiente completo para desenvolvimento:
+
+```bash
+# Iniciar container em background
+cd src/processor
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
+
+# Executar comandos no container
+docker-compose exec processor python -c "import boto3; print('✓ AWS SDK loaded')"
+
+# Parar e remover
+docker-compose down
+```
+
+**Configuração**:
+```yaml
+services:
+  processor:
+    build: .
+    environment:
+      - AWS_REGION=us-east-1
+      - TRACKING_TABLE=ai-techne-academy-tracking-dev
+      - OUTPUT_BUCKET=ai-techne-academy-output-dev-<account-id>
+    volumes:
+      - ~/.aws:/root/.aws:ro  # AWS credentials
+      - ./:/app               # Hot reload
+    resources:
+      limits:
+        cpus: '2.0'
+        memory: 8G
+```
+
+#### Push para ECR
+
+**Pré-requisito**: Repositório ECR criado via SAM template
+
+```bash
+# Deploy da stack SAM (cria ECR repository)
+cd infrastructure
+sam deploy --guided
+
+# Push da imagem usando script automatizado
+./scripts/push-processor.sh
+```
+
+O script [`push-processor.sh`](../../scripts/push-processor.sh) automatiza:
+1. ✅ Login no ECR
+2. ✅ Tag da imagem (latest + timestamp)
+3. ✅ Push para ECR
+4. ✅ Verificações de segurança
+
+**URI da Imagem**:
+```
+<account-id>.dkr.ecr.us-east-1.amazonaws.com/ai-techne-academy/processor:latest
+```
+
+#### Teste do Container
+
+```bash
+# Teste de dependências
+docker run --rm ai-techne-processor:latest \
+  python -c "import boto3, langchain, docx; print('✓ All dependencies loaded')"
+
+# Teste com event mock (com AWS credentials)
+docker run --rm \
+  -v ~/.aws:/root/.aws:ro \
+  -e AWS_REGION=us-east-1 \
+  -e TRACKING_TABLE=test-table \
+  -e OUTPUT_BUCKET=test-bucket \
+  ai-techne-processor:latest \
+  python main.py '{"execution_id":"test-123","video_s3_uri":"s3://bucket/video.mp4","transcription_s3_uri":"s3://bucket/transcript.json"}'
+```
+
+### 📦 ECR Repository
+
+O repositório ECR é gerenciado via SAM template ([`template.yaml`](../../infrastructure/template.yaml)):
+
+```yaml
+ProcessorRepository:
+  Type: AWS::ECR::Repository
+  Properties:
+    RepositoryName: ai-techne-academy/processor
+    ImageScanningConfiguration:
+      ScanOnPush: true
+    LifecyclePolicy:
+      # Mantém últimas 5 imagens
+      # Expira untagged após 7 dias
+```
+
+**Lifecycle Policy**:
+- Mantém últimas 5 imagens tagged
+- Remove imagens untagged após 7 dias
+- Scan automático de vulnerabilidades
+
+### 🚀 ECS Task Definition
+
+Para criar ECS Task Definition usando a imagem:
+
+```json
+{
+  "family": "ai-techne-processor",
+  "taskRoleArn": "arn:aws:iam::<account>:role/ai-techne-academy-ecs-task-dev",
+  "executionRoleArn": "arn:aws:iam::<account>:role/ai-techne-academy-ecs-execution-dev",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "8192",
+  "containerDefinitions": [{
+    "name": "processor",
+    "image": "<account>.dkr.ecr.us-east-1.amazonaws.com/ai-techne-academy/processor:latest",
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/ai-techne-academy-processor-dev",
+        "awslogs-region": "us-east-1",
+        "awslogs-stream-prefix": "ecs"
+      }
+    },
+    "environment": [
+      {"name": "TRACKING_TABLE", "value": "ai-techne-academy-tracking-dev"},
+      {"name": "OUTPUT_BUCKET", "value": "ai-techne-academy-output-dev-<account>"},
+      {"name": "AWS_REGION", "value": "us-east-1"},
+      {"name": "LOG_LEVEL", "value": "INFO"}
+    ]
+  }]
+}
 ```
 
 ---
