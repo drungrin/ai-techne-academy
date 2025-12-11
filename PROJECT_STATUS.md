@@ -1,7 +1,7 @@
 # AI Techne Academy - Status do Projeto
 
-**Última Atualização**: 2024-12-11 18:25 UTC
-**Status Geral**: 🚀 Deployado em Dev - Pronto para Testes
+**Última Atualização**: 2024-12-11 19:40 UTC
+**Status Geral**: 🔧 Bugs Corrigidos - Deploy Completo - Pronto para Teste E2E
 
 ---
 
@@ -148,6 +148,7 @@ Planejamento ████████████ Setup ████████
   - Streaming support
   - Token tracking e cálculo de custos
   - Helpers: PromptTemplate, create_xml_prompt
+  - Circuit breaker integration (170 linhas)
 - [x] **document_generator.py** (710 linhas)
   - Pipeline completo de 6 etapas
   - Processamento single-chunk e multi-chunk
@@ -170,6 +171,7 @@ Planejamento ████████████ Setup ████████
 - [x] requirements.txt (16 linhas) - LangChain, boto3, python-docx
 - [x] __init__.py (33 linhas) - Module exports
 - [x] README.md (579 linhas) - Documentação completa
+- [x] circuit_breaker.py (170 linhas) - Proteção Bedrock
 
 **Progresso**: 100% (4/4 componentes + docs) ✅
 **Duração Real**: ~2 horas
@@ -192,7 +194,7 @@ Planejamento ████████████ Setup ████████
 **Duração Real**: ~3 horas
 **Status**: ✅ Completo
 
-**ECR Repository**: `<account>.dkr.ecr.us-east-1.amazonaws.com/ai-techne-academy/processor`
+**ECR Repository**: `435376089474.dkr.ecr.us-east-1.amazonaws.com/ai-techne-academy/processor`
 **Image Size**: ~250MB
 **Pré-requisitos**: Fase 2.2 completa ✅
 
@@ -254,7 +256,7 @@ Planejamento ████████████ Setup ████████
 
 ##### 3.2 SAM Template Completo (100%) ✅
 - [x] Template completo e validado
-- [x] Todos recursos implementados (26 recursos)
+- [x] Todos recursos implementados (32 recursos)
 - [x] Outputs completos (44 outputs)
 - [x] Parâmetros configuráveis
 - [x] Validação SAM passou
@@ -281,6 +283,7 @@ Planejamento ████████████ Setup ████████
   - Runbooks operacionais
   - Queries CloudWatch Insights
   - KPIs e SLOs definidos
+- [x] Dead Letter Queue (SQS) configurado
 
 **Progresso**: 100% (3/3 tarefas) ✅
 **Duração Real**: ~2 horas
@@ -291,19 +294,37 @@ Planejamento ████████████ Setup ████████
 
 ---
 
-### ⏸️ Fase 4: Testes e Validação (0%)
+### 🔄 Fase 4: Testes e Validação (10%)
 
-**Duração Estimada**: 1 semana (Dias 21-25)  
-**Status**: ⏸️ Aguardando Fase 3
+**Duração Estimada**: 1 semana (Dias 21-25)
+**Status**: 🔄 EM PROGRESSO - Debugging Completo, Aguardando Teste E2E
 
 #### Resumo de Tarefas
-- [ ] 4.1 Testes Unitários (2 dias)
+- [ ] 4.1 Testes Unitários (2 dias) - **85% completo** (Lambdas testadas, falta Processor)
 - [ ] 4.2 Testes de Integração (2 dias)
-- [ ] 4.3 Testes com Vídeos Reais (2 dias)
+- [ ] 4.3 Testes com Vídeos Reais (2 dias) - **PRÓXIMO PASSO**
 - [ ] 4.4 Performance Testing (1 dia)
 
-**Meta de Cobertura**: >80%  
-**Pré-requisitos**: Fase 3 completa
+#### Preparação para Teste E2E ✅
+- [x] **TEST_E2E_GUIDE.md** criado (292 linhas)
+  - Guia passo a passo completo
+  - 8 passos documentados
+  - Comandos CLI prontos
+  - Troubleshooting incluído
+  - Checklist de sucesso
+- [x] **5 Bugs Críticos Corrigidos** (Sessão 14)
+  - Contrato Step Functions ↔ Lambda
+  - Environment variables defaults
+  - URL encoding de espaços
+  - IAM permission TagResource
+  - Response format Lambda
+- [x] **NEXT_TASK_PROMPT.md** criado (213 linhas)
+  - Prompt completo para próxima task
+  - Contexto de bugs corrigidos
+  - Comandos e checklist
+
+**Meta de Cobertura**: >80% ✅ ALCANÇADO (Lambdas)  
+**Pré-requisitos**: Fase 3 completa ✅
 
 ---
 
@@ -325,8 +346,8 @@ Planejamento ████████████ Setup ████████
 ## 📈 Métricas do Projeto
 
 ### Documentação
-- **Linhas Escritas**: 3,774
-- **Arquivos de Documentação**: 8
+- **Linhas Escritas**: 6,576 (+292 TEST_E2E_GUIDE)
+- **Arquivos de Documentação**: 11
 - **Cobertura de Especificação**: 100%
 
 ### Infraestrutura (IaC)
@@ -338,42 +359,45 @@ Planejamento ████████████ Setup ████████
 - **Ambientes Configurados**: 1/3 (dev ✅ deployado, staging, prod)
 
 ### Código
-- **Linhas de Código Python**: 3,606 linhas
+- **Linhas de Código Python**: 3,776 linhas
   - Lambda Functions: 1,520 (377 Trigger + 422 Transcribe + 721 Finalizer)
-  - Processador ECS: 2,086 (509 Parser + 473 LLM Client + 710 Generator + 394 Main)
+  - Processador ECS: 2,256 (509 Parser + 473 LLM Client + 710 Generator + 394 Main + 170 Circuit Breaker)
 - **Linhas de Testes**: 1,472 (236 Trigger + 506 Transcribe + 730 Finalizer)
 - **Lambda Functions**: 3/3 (100%) ✅
-- **Processador ECS**: 4/4 (100%) ✅
+- **Processador ECS**: 5/5 (100%) ✅
 - **Cobertura de Testes**: ~85% (Lambda Functions)
-- **Documentação Técnica**: 5,632 linhas (README + Design + Reviews + Guides)
-- **Circuit Breaker**: 170 linhas (proteção Bedrock)
-- **Scripts Helper**: 114 linhas (setup automation)
+- **Documentação Técnica**: 6,576 linhas (README + Design + Reviews + Guides)
+- **Scripts Helper**: 228 linhas (setup automation + build + push)
 
 ---
 
 ## 🎯 Objetivos Atuais
 
 ### Objetivo Imediato
-**Fase 4: Testes End-to-End**
+**Teste End-to-End com Vídeo Real** 🎬
+
+Siga o guia: [`TEST_E2E_GUIDE.md`](TEST_E2E_GUIDE.md)
 
 ### Próxima Sessão
-1. **Teste End-to-End com Vídeo**
+1. **Executar Teste E2E** (30-45 min)
    - Upload de vídeo de teste no S3
    - Monitorar execução Step Functions
    - Validar documento gerado
    - Verificar notificações SNS
-2. **Validação de Monitoramento**
-   - Checar métricas no Dashboard
-   - Validar alarmes (devem estar OK)
-   - Verificar logs CloudWatch
-3. **Solicitação Quota Bedrock** (se necessário)
-   - Request 50-100 req/min
-   - Request 500K-1M tokens/min
+   - Checar Dashboard e alarmes
+2. **Documentar Resultados**
+   - Métricas de performance
+   - Qualidade dos documentos
+   - Custos reais
+3. **Ajustes se Necessário**
+   - Otimizações baseadas em resultados
+   - Correções de bugs
 
 ### Esta Semana
 - Testes end-to-end com vídeos reais
 - Ajustes baseados em resultados
 - Documentação de operação
+- Solicitar quota Bedrock (se necessário)
 
 ---
 
@@ -396,7 +420,7 @@ Planejamento ████████████ Setup ████████
 **Mitigação**:
 - ✅ Circuit breaker implementado
 - ✅ Processo de solicitação documentado
-- ⏳ Aguardando aprovação de quota (1-2 dias)
+- ⏳ Aguardando aprovação de quota (opcional - 1-2 dias)
 
 ### Risco 2: Custos Acima do Esperado
 **Status**: 🟡 Monitorar  
@@ -419,13 +443,13 @@ Semana 1  ███████████████████████�
 Semana 2  ░░░░░░░░████░░░░░░░░░░░░░░ Fase 2: Dev (parte 1)
 Semana 3  ░░░░░░░░░░░░████░░░░░░░░░░ Fase 2: Dev (parte 2)
 Semana 4  ░░░░░░░░░░░░░░░░████░░░░░░ Fase 3: Orquestração
-Semana 5  ░░░░░░░░░░░░░░░░░░░░████░░ Fase 4: Testes
-Semana 6  ░░░░░░░░░░░░░░░░░░░░░░░░██ Fase 5: Deploy
+Semana 5  ░░░░░░░░░░░░░░░░░░░░▓░░░░░ Fase 4: Testes ← AGORA
+Semana 6  ░░░░░░░░░░░░░░░░░░░░░░░░░░ Fase 5: Deploy
 
-Hoje: ↑ (Início da Semana 1)
+Hoje: ↑ (Início dos Testes E2E)
 ```
 
-**Data Início**: 2024-12-11 (previsto)  
+**Data Início**: 2024-12-11 (realizado)  
 **Data Entrega**: 2025-01-22 (previsto)  
 **Duração Total**: 6 semanas
 
@@ -459,7 +483,7 @@ Hoje: ↑ (Início da Semana 1)
 - **Gasto Total**: ~$2-3/mês estimado
 - **Ambiente Dev**: $2-3/mês (S3 + DynamoDB + CloudWatch + SNS)
 - **Ambiente Prod**: Não criado
-- **Nota**: Custos de processamento (Transcribe, Bedrock, ECS) serão adicionados na Fase 2
+- **Nota**: Custos de processamento (Transcribe, Bedrock, ECS) serão validados no teste E2E
 
 ---
 
@@ -485,6 +509,11 @@ Hoje: ↑ (Início da Semana 1)
 4. [Gestão de Contexto](./docs/CONTEXT_MANAGEMENT.md) - Como retomar o trabalho
 5. [Log de Implementação](./implementation_log.md) - Histórico de atividades
 6. [README](./README.md) - Guia principal do projeto
+7. [Deployment Guide](./docs/DEPLOYMENT_GUIDE.md) - Guia completo de deploy
+8. [Architecture Review](./docs/ARCHITECTURE_REVIEW.md) - Revisão arquitetural
+9. [Observability Strategy](./docs/OBSERVABILITY_STRATEGY.md) - Estratégia de monitoramento
+10. [Quick Start](./QUICK_START.md) - Deploy rápido
+11. **[Test E2E Guide](./TEST_E2E_GUIDE.md)** - Guia de teste end-to-end
 
 ---
 
