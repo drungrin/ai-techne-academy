@@ -449,6 +449,45 @@ Resources:
           Value: !Ref Environment
         - Key: ManagedBy
           Value: SAM
+  # ========================================
+  # Lambda Functions
+  # ========================================
+  
+  TriggerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-trigger-${Environment}'
+      Description: Trigger function that responds to S3 video uploads
+      CodeUri: ../src/functions/trigger/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Timeout: 60
+      MemorySize: 256
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          TRACKING_TABLE: !Ref ProcessingTrackingTable
+          ENVIRONMENT: !Ref Environment
+          LOG_LEVEL: INFO
+      Events:
+        S3Event:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - aws.s3
+              detail-type:
+                - Object Created
+              detail:
+                bucket:
+                  name:
+                    - !Ref InputBucket
+      Tags:
+        Project: !Ref ProjectName
+        Environment: !Ref Environment
+        ManagedBy: SAM
+        Function: Trigger
+
 
 # ========================================
 # Outputs
@@ -526,6 +565,17 @@ Outputs:
   StateMachineLogGroupName:
     Description: Name of the Step Functions log group
     Value: !Ref StateMachineLogGroup
+  # Lambda Functions
+  TriggerFunctionArn:
+    Description: ARN of the Trigger Lambda function
+    Value: !GetAtt TriggerFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-TriggerFunction'
+
+  TriggerFunctionName:
+    Description: Name of the Trigger Lambda function
+    Value: !Ref TriggerFunction
+
 
   ProcessorLogGroupName:
     Description: Name of the ECS processor log group
