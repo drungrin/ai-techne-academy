@@ -590,8 +590,214 @@ Resources:
         ManagedBy: SAM
         Function: Finalizer
 
+  # ========================================
+  # ECS Cluster and Task Definition
+  # ========================================
+  
+  ProcessingCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub '${ProjectName}-${Environment}'
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: SAM
 
+  ProcessingTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub '${ProjectName}-processor-${Environment}'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '2048'
+      Memory: '8192'
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ContainerDefinitions:
+        - Name: processor
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ProjectName}/processor:latest'
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ProcessorLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: processor
+          Environment:
+            - Name: OUTPUT_BUCKET
+              Value: !Ref OutputBucket
+            - Name: TRANSCRIPTION_BUCKET
+              Value: !Ref TranscriptionBucket
+            - Name: TRACKING_TABLE
+              Value: !Ref ProcessingTrackingTable
+            - Name: BEDROCK_MODEL_ID
+              Value: anthropic.claude-sonnet-4-5-20250929-v1:0
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+            - Name: LOG_LEVEL
+              Value: INFO
+            - Name: MAX_TOKENS_PER_CHUNK
+              Value: '100000'
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: SAM
 
+  # ========================================
+  # Step Functions State Machine
+  # ========================================
+  
+  StateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-statemachine-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+        - PolicyName: StateMachineExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt TranscribeStarterFunction.Arn
+                  - !GetAtt FinalizerFunction.Arn
+              - Effect: Allow
+                Action:
+                  - transcribe:GetTranscriptionJob
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecs:RunTask
+                  - ecs:StopTask
+                  - ecs:DescribeTasks
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource:
+                  - !GetAtt ECSTaskExecutionRole.Arn
+                  - !GetAtt ECSTaskRole.Arn
+              - Effect: Allow
+                Action:
+                  - events:PutTargets
+                  - events:PutRule
+                  - events:DescribeRule
+                Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctions*'
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: SAM
+
+  ProcessingStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub '${ProjectName}-workflow-${Environment}'
+      DefinitionUri: statemachine/workflow.asl.json
+      DefinitionSubstitutions:
+        TranscribeStarterFunctionArn: !GetAtt TranscribeStarterFunction.Arn
+        FinalizerFunctionArn: !GetAtt FinalizerFunction.Arn
+        ECSClusterArn: !GetAtt ProcessingCluster.Arn
+        ECSTaskDefinitionArn: !Ref ProcessingTaskDefinition
+        SubnetId: !Ref AWS::NoValue
+      Role: !GetAtt StateMachineRole.Arn
+      Logging:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt StateMachineLogGroup.Arn
+      Tracing:
+        Enabled: true
+      Tags:
+        Project: !Ref ProjectName
+        Environment: !Ref Environment
+        ManagedBy: SAM
+
+  # ========================================
+  # EventBridge Rule to Trigger State Machine
+  # ========================================
+  
+  EventBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-eventbridge-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StartStateMachine
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: states:StartExecution
+                Resource: !GetAtt ProcessingStateMachine.Arn
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: SAM
+
+  VideoUploadRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${ProjectName}-video-upload-${Environment}'
+      Description: Trigger video processing workflow when video is uploaded to S3
+      State: ENABLED
+      EventPattern:
+        source:
+          - aws.s3
+        detail-type:
+          - Object Created
+        detail:
+          bucket:
+            name:
+              - !Ref InputBucket
+          object:
+            key:
+              - prefix: ''
+      Targets:
+        - Arn: !GetAtt ProcessingStateMachine.Arn
+          RoleArn: !GetAtt EventBridgeRole.Arn
+          Id: VideoProcessingStateMachine
 
 # ========================================
 # Outputs
@@ -757,3 +963,45 @@ Outputs:
   Environment:
     Description: Environment name (dev, staging, prod)
     Value: !Ref Environment
+
+  # ECS Cluster
+  ECSClusterArn:
+    Description: ARN of the ECS cluster for processor tasks
+    Value: !GetAtt ProcessingCluster.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ECSCluster'
+
+  ECSClusterName:
+    Description: Name of the ECS cluster
+    Value: !Ref ProcessingCluster
+
+  # ECS Task Definition
+  ECSTaskDefinitionArn:
+    Description: ARN of the ECS task definition
+    Value: !Ref ProcessingTaskDefinition
+    Export:
+      Name: !Sub '${AWS::StackName}-ECSTaskDefinition'
+
+  # Step Functions State Machine
+  StateMachineArn:
+    Description: ARN of the Step Functions state machine
+    Value: !GetAtt ProcessingStateMachine.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-StateMachine'
+
+  StateMachineName:
+    Description: Name of the Step Functions state machine
+    Value: !GetAtt ProcessingStateMachine.Name
+
+  StateMachineRoleArn:
+    Description: ARN of the Step Functions execution role
+    Value: !GetAtt StateMachineRole.Arn
+
+  # EventBridge Rule
+  VideoUploadRuleArn:
+    Description: ARN of the EventBridge rule for video uploads
+    Value: !GetAtt VideoUploadRule.Arn
+
+  VideoUploadRuleName:
+    Description: Name of the EventBridge rule
+    Value: !Ref VideoUploadRule
