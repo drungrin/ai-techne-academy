@@ -2,10 +2,11 @@
 LLM Client for AWS Bedrock using LangChain
 
 This module provides a client for interacting with AWS Bedrock's Claude Sonnet 4
-model using LangChain. Includes retry logic, rate limiting, and streaming support.
+model using LangChain. Includes retry logic, rate limiting, streaming support,
+and circuit breaker for quota protection.
 
 Author: AI Techne Academy
-Version: 1.0.0
+Version: 1.1.0
 """
 
 import time
@@ -17,6 +18,8 @@ import json
 from langchain_aws import ChatBedrock
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import HumanMessage, SystemMessage, AIMessage
+
+from circuit_breaker import BedrockCircuitBreaker, CircuitBreakerOpen
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +128,7 @@ class BedrockLLMClient:
         top_p: float = 0.95,
         top_k: int = 250,
         enable_rate_limiting: bool = True,
+        enable_circuit_breaker: bool = True,
         max_retries: int = 3
     ):
         """
@@ -138,6 +142,7 @@ class BedrockLLMClient:
             top_p: Nucleus sampling parameter
             top_k: Top-k sampling parameter
             enable_rate_limiting: Enable rate limiting
+            enable_circuit_breaker: Enable circuit breaker for quota protection
             max_retries: Maximum retry attempts
         """
         self.model_id = model_id
@@ -161,10 +166,19 @@ class BedrockLLMClient:
         # Rate limiter
         self.rate_limiter = RateLimiter() if enable_rate_limiting else None
         
+        # Circuit breaker for quota protection
+        self.circuit_breaker = BedrockCircuitBreaker(
+            failure_threshold=5,
+            timeout=300  # 5 minutes
+        ) if enable_circuit_breaker else None
+        
         # Track usage
         self.total_usage = TokenUsage(input_tokens=0, output_tokens=0)
         
-        logger.info(f"Initialized Bedrock client: {model_id} in {region}")
+        logger.info(
+            f"Initialized Bedrock client: {model_id} in {region} "
+            f"(circuit_breaker={'enabled' if enable_circuit_breaker else 'disabled'})"
+        )
     
     def invoke(
         self,
@@ -173,7 +187,7 @@ class BedrockLLMClient:
         temperature: Optional[float] = None
     ) -> tuple[str, TokenUsage]:
         """
-        Invoke the model with retry logic.
+        Invoke the model with retry logic and circuit breaker protection.
         
         Args:
             prompt: User prompt
@@ -184,9 +198,33 @@ class BedrockLLMClient:
             Tuple of (response_text, token_usage)
             
         Raises:
+            CircuitBreakerOpen: If circuit breaker is open (quota exceeded)
             Exception: If all retries fail
         """
         logger.info(f"Invoking Bedrock model (prompt length: {len(prompt)} chars)")
+        
+        # Circuit breaker check
+        if self.circuit_breaker:
+            try:
+                return self.circuit_breaker.call(
+                    self._invoke_internal,
+                    prompt,
+                    system_prompt,
+                    temperature
+                )
+            except CircuitBreakerOpen:
+                logger.error("Circuit breaker OPEN - Bedrock quota likely exceeded")
+                raise
+        else:
+            return self._invoke_internal(prompt, system_prompt, temperature)
+    
+    def _invoke_internal(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: Optional[float] = None
+    ) -> tuple[str, TokenUsage]:
+        """Internal invoke implementation with retry logic."""
         
         # Estimate tokens for rate limiting
         estimated_tokens = self.estimate_tokens(prompt)
@@ -401,6 +439,12 @@ class BedrockLLMClient:
         """Reset usage tracking."""
         self.total_usage = TokenUsage(input_tokens=0, output_tokens=0)
         logger.info("Usage tracking reset")
+    
+    def get_circuit_breaker_state(self) -> Optional[dict]:
+        """Get circuit breaker state for monitoring."""
+        if self.circuit_breaker:
+            return self.circuit_breaker.get_state()
+        return None
 
 
 class PromptTemplate:

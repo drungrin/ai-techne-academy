@@ -33,6 +33,13 @@ Parameters:
     Description: Email address for SNS notifications
     AllowedPattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
 
+  SubnetId:
+    Type: String
+    Description: >
+      Public subnet ID for ECS Fargate tasks (must have internet access via IGW).
+      Example: subnet-12345abc. Leave empty to use default VPC subnet.
+    Default: ''
+
   InputBucketRetentionDays:
     Type: Number
     Default: 30
@@ -284,6 +291,27 @@ Resources:
           Value: SAM
 
   # ========================================
+  # Dead Letter Queue for Lambda Functions
+  # ========================================
+  
+  ProcessingDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${ProjectName}-dlq-${Environment}'
+      MessageRetentionPeriod: 1209600  # 14 days
+      VisibilityTimeout: 300
+      KmsMasterKeyId: alias/aws/sqs
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: SAM
+        - Key: Purpose
+          Value: Dead Letter Queue for failed Lambda invocations
+
+  # ========================================
   # IAM Roles (Prepared for Future Use)
   # ========================================
   
@@ -358,6 +386,14 @@ Resources:
                 Action:
                   - cloudwatch:PutMetricData
                 Resource: '*'
+        - PolicyName: SQSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                Resource: !GetAtt ProcessingDLQ.Arn
       Tags:
         - Key: Project
           Value: !Ref ProjectName
@@ -517,6 +553,9 @@ Resources:
       Timeout: 60
       MemorySize: 256
       Role: !GetAtt LambdaExecutionRole.Arn
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt ProcessingDLQ.Arn
       Environment:
         Variables:
           TRACKING_TABLE: !Ref ProcessingTrackingTable
@@ -551,6 +590,9 @@ Resources:
       Timeout: 60
       MemorySize: 256
       Role: !GetAtt LambdaExecutionRole.Arn
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt ProcessingDLQ.Arn
       Environment:
         Variables:
           TRACKING_TABLE: !Ref ProcessingTrackingTable
@@ -575,6 +617,9 @@ Resources:
       Timeout: 90
       MemorySize: 256
       Role: !GetAtt LambdaExecutionRole.Arn
+      DeadLetterQueue:
+        Type: SQS
+        TargetArn: !GetAtt ProcessingDLQ.Arn
       Environment:
         Variables:
           TRACKING_TABLE: !Ref ProcessingTrackingTable
@@ -730,7 +775,7 @@ Resources:
         FinalizerFunctionArn: !GetAtt FinalizerFunction.Arn
         ECSClusterArn: !GetAtt ProcessingCluster.Arn
         ECSTaskDefinitionArn: !Ref ProcessingTaskDefinition
-        SubnetId: !Ref AWS::NoValue
+        SubnetId: !Ref SubnetId
       Role: !GetAtt StateMachineRole.Arn
       Logging:
         Level: ALL

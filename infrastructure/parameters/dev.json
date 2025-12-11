@@ -12,6 +12,10 @@
     "ParameterValue": "michel.moreira@cronapp.io"
   },
   {
+    "ParameterKey": "SubnetId",
+    "ParameterValue": "subnet-f1e2f1de"
+  },
+  {
     "ParameterKey": "InputBucketRetentionDays",
     "ParameterValue": "30"
   },
