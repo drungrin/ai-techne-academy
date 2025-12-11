@@ -7,7 +7,7 @@ import json
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 import re
 
 import boto3
@@ -63,8 +63,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         execution_id = input_data['execution_id']
         s3_uri = input_data['s3_uri']
-        language_code = input_data.get('language_code', LANGUAGE_CODE)
-        max_speakers = input_data.get('max_speakers', MAX_SPEAKERS)
+        language_code = input_data.get('language_code') or LANGUAGE_CODE
+        max_speakers = input_data.get('max_speakers') or MAX_SPEAKERS
         
         logger.info(f"Processing execution {execution_id} for {s3_uri}")
         
@@ -111,9 +111,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.warning(f"Failed to update tracking record for {execution_id}")
             # Don't fail the Lambda - job was started successfully
         
-        # Success response
-        response_body = {
+        # Success response - Return direct format for Step Functions
+        response = {
+            'job_name': job_name,
             'status': 'success',
+            'transcription_uri': f"s3://{OUTPUT_BUCKET}/{output_key}",
             'execution_id': execution_id,
             'transcription_job': {
                 'job_name': job_name,
@@ -127,7 +129,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
         
         logger.info(f"Successfully started transcription job {job_name}")
-        return create_response(200, response_body)
+        return response
         
     except Exception as e:
         logger.error(f"Error processing event: {str(e)}", exc_info=True)
@@ -271,10 +273,23 @@ def start_transcription_job(
         Dict with job details or None
     """
     try:
+        # URL encode the S3 URI if it contains spaces or special characters
+        # Parse and rebuild to ensure proper encoding
+        parsed = urlparse(media_uri)
+        bucket = parsed.netloc
+        key = parsed.path.lstrip('/')
+        # Quote the key (path) but not the bucket
+        encoded_key = quote(key, safe='/')
+        encoded_media_uri = f"s3://{bucket}/{encoded_key}"
+        
+        logger.info(f"Starting transcription job: {job_name}")
+        logger.info(f"Original URI: {media_uri}")
+        logger.info(f"Encoded URI: {encoded_media_uri}")
+        
         response = transcribe_client.start_transcription_job(
             TranscriptionJobName=job_name,
             Media={
-                'MediaFileUri': media_uri
+                'MediaFileUri': encoded_media_uri
             },
             MediaFormat=media_format,
             LanguageCode=language_code,
@@ -305,6 +320,8 @@ def start_transcription_job(
     except ClientError as e:
         error_code = e.response['Error']['Code']
         error_message = e.response['Error']['Message']
+        logger.error(f"Transcribe ClientError: {error_code} - {error_message}")
+        logger.error(f"Full error response: {json.dumps(e.response, default=str)}")
         
         if error_code == 'ConflictException':
             logger.warning(f"Job already exists: {job_name}")
@@ -335,7 +352,11 @@ def start_transcription_job(
             
         else:
             logger.error(f"Transcribe error ({error_code}): {error_message}")
+            logger.error(f"Job params: job_name={job_name}, media_uri={encoded_media_uri}, format={media_format}")
             return None
+    except Exception as e:
+        logger.error(f"Unexpected error in start_transcription_job: {str(e)}", exc_info=True)
+        return None
 
 
 def update_tracking_record(

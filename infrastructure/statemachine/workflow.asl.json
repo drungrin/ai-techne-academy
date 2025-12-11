@@ -6,12 +6,12 @@
       "Type": "Pass",
       "Comment": "Validate and prepare input data",
       "Parameters": {
-        "execution_id.$": "$$.Execution.Name",
+        "execution_id.$": "$.execution_id",
         "input.$": "$",
-        "video_key.$": "$.detail.object.key",
-        "bucket_name.$": "$.detail.bucket.name",
-        "video_size.$": "$.detail.object.size",
-        "timestamp.$": "$.time"
+        "video_key.$": "$.video_key",
+        "bucket_name.$": "$.bucket",
+        "video_size.$": "$.metadata.size_bytes",
+        "timestamp.$": "$.timestamp"
       },
       "Next": "StartTranscription"
     },
@@ -24,9 +24,9 @@
         "FunctionName": "${TranscribeStarterFunctionArn}",
         "Payload": {
           "execution_id.$": "$.execution_id",
-          "video_s3_uri.$": "States.Format('s3://{}/{}', $.bucket_name, $.video_key)",
+          "s3_uri.$": "States.Format('s3://{}/{}', $.bucket_name, $.video_key)",
           "video_key.$": "$.video_key",
-          "bucket_name.$": "$.bucket_name",
+          "bucket.$": "$.bucket_name",
           "video_size.$": "$.video_size"
         }
       },
@@ -76,8 +76,7 @@
       "ResultPath": "$.transcribe_status",
       "ResultSelector": {
         "status.$": "$.TranscriptionJob.TranscriptionJobStatus",
-        "transcript_uri.$": "$.TranscriptionJob.Transcript.TranscriptFileUri",
-        "failure_reason.$": "$.TranscriptionJob.FailureReason"
+        "full_result.$": "$"
       },
       "Retry": [
         {
@@ -138,7 +137,7 @@
         "execution_id.$": "$.execution_id",
         "video_s3_uri.$": "States.Format('s3://{}/{}', $.bucket_name, $.video_key)",
         "video_key.$": "$.video_key",
-        "transcription_s3_uri.$": "$.transcribe_status.transcript_uri",
+        "transcription_s3_uri.$": "$.transcribe_status.full_result.TranscriptionJob.Transcript.TranscriptFileUri",
         "video_metadata": {
           "size.$": "$.video_size",
           "timestamp.$": "$.timestamp"
@@ -274,7 +273,7 @@
           "video_key.$": "$.video_key",
           "error.$": "$.error",
           "error_type": "TranscriptionError",
-          "failure_reason.$": "$.transcribe_status.failure_reason"
+          "failure_reason.$": "$.transcribe_status.full_result.TranscriptionJob.FailureReason"
         }
       },
       "ResultPath": "$.finalizer_result",

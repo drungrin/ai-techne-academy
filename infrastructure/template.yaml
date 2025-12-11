@@ -377,6 +377,7 @@ Resources:
                   - transcribe:StartTranscriptionJob
                   - transcribe:GetTranscriptionJob
                   - transcribe:ListTranscriptionJobs
+                  - transcribe:TagResource
                 Resource: '*'
         - PolicyName: CloudWatchMetrics
           PolicyDocument:
@@ -386,6 +387,14 @@ Resources:
                 Action:
                   - cloudwatch:PutMetricData
                 Resource: '*'
+        - PolicyName: StepFunctionsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${ProjectName}-workflow-${Environment}'
         - PolicyName: SQSAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -559,6 +568,7 @@ Resources:
       Environment:
         Variables:
           TRACKING_TABLE: !Ref ProcessingTrackingTable
+          STATE_MACHINE_ARN: !GetAtt ProcessingStateMachine.Arn
           ENVIRONMENT: !Ref Environment
           LOG_LEVEL: INFO
       Events:
@@ -821,28 +831,8 @@ Resources:
         - Key: ManagedBy
           Value: SAM
 
-  VideoUploadRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Name: !Sub '${ProjectName}-video-upload-${Environment}'
-      Description: Trigger video processing workflow when video is uploaded to S3
-      State: ENABLED
-      EventPattern:
-        source:
-          - aws.s3
-        detail-type:
-          - Object Created
-        detail:
-          bucket:
-            name:
-              - !Ref InputBucket
-          object:
-            key:
-              - prefix: ''
-      Targets:
-        - Arn: !GetAtt ProcessingStateMachine.Arn
-          RoleArn: !GetAtt EventBridgeRole.Arn
-          Id: VideoProcessingStateMachine
+  # VideoUploadRule removed - TriggerFunction now handles starting the state machine
+  # This ensures tracking record is created before workflow starts
 
   # ========================================
   # CloudWatch Dashboard
@@ -1242,15 +1232,6 @@ Outputs:
   StateMachineRoleArn:
     Description: ARN of the Step Functions execution role
     Value: !GetAtt StateMachineRole.Arn
-
-  # EventBridge Rule
-  VideoUploadRuleArn:
-    Description: ARN of the EventBridge rule for video uploads
-    Value: !GetAtt VideoUploadRule.Arn
-
-  VideoUploadRuleName:
-    Description: Name of the EventBridge rule
-    Value: !Ref VideoUploadRule
 
   # CloudWatch Monitoring
   DashboardName:

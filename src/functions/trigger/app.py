@@ -6,8 +6,9 @@ import os
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 from urllib.parse import unquote_plus
+from decimal import Decimal
 import uuid
 
 import boto3
@@ -254,7 +255,7 @@ def extract_video_metadata(bucket: str, key: str, metadata: Dict[str, Any]) -> D
         'extension': extension,
         'mime_type': SUPPORTED_FORMATS.get(extension, 'unknown'),
         'size_bytes': metadata['size'],
-        'size_mb': round(metadata['size'] / (1024 * 1024), 2),
+        'size_mb': Decimal(str(round(metadata['size'] / (1024 * 1024), 2))),
         'bucket': bucket,
         'key': key,
         's3_uri': f"s3://{bucket}/{key}",
@@ -330,11 +331,16 @@ def start_step_function_execution(
         Execution ARN or None
     """
     try:
+        # Convert Decimal to float for JSON serialization
+        metadata_for_sfn = metadata.copy()
+        if 'size_mb' in metadata_for_sfn and isinstance(metadata_for_sfn['size_mb'], Decimal):
+            metadata_for_sfn['size_mb'] = float(metadata_for_sfn['size_mb'])
+        
         input_data = {
             'execution_id': execution_id,
             'video_key': video_key,
             'bucket': bucket,
-            'metadata': metadata,
+            'metadata': metadata_for_sfn,
             'timestamp': datetime.utcnow().isoformat()
         }
         
@@ -353,6 +359,27 @@ def start_step_function_execution(
         return None
 
 
+def convert_decimals(obj: Any) -> Any:
+    """
+    Recursively convert Decimal types to float/int for JSON serialization
+    
+    Args:
+        obj: Object that may contain Decimals
+        
+    Returns:
+        Object with Decimals converted to float/int
+    """
+    if isinstance(obj, Decimal):
+        # Convert to int if it's a whole number, otherwise float
+        return int(obj) if obj % 1 == 0 else float(obj)
+    elif isinstance(obj, dict):
+        return {key: convert_decimals(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_decimals(item) for item in obj]
+    else:
+        return obj
+
+
 def create_response(status_code: int, body: Any) -> Dict[str, Any]:
     """
     Create Lambda response
@@ -365,6 +392,8 @@ def create_response(status_code: int, body: Any) -> Dict[str, Any]:
         Formatted response dict
     """
     if isinstance(body, dict):
+        # Convert Decimals before JSON serialization
+        body = convert_decimals(body)
         body_str = json.dumps(body)
     else:
         body_str = str(body)
