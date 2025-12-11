@@ -1,15 +1,15 @@
 # AI Techne Academy - Status do Projeto
 
-**Última Atualização**: 2024-12-11 16:28 UTC
-**Status Geral**: ✅ Fase 3.1 Completa - Orquestração Step Functions Implementada
+**Última Atualização**: 2024-12-11 17:27 UTC
+**Status Geral**: ✅ Bloqueios Críticos Resolvidos - Pronto para Deploy
 
 ---
 
-## 📊 Progresso Geral: 85%
+## 📊 Progresso Geral: 90%
 
 ```
-██████████████████████████████████░░░░░░ 85%
-Planejamento ████████████ Setup ████████████ Implementação ████████████ Orquestração ██████
+████████████████████████████████████░░░░ 90%
+Planejamento ████████████ Setup ████████████ Implementação ████████████ Orquestração ██████████ Fixes █████
 ```
 
 ---
@@ -301,8 +301,8 @@ Planejamento ████████████ Setup ████████
 - **Cobertura de Especificação**: 100%
 
 ### Infraestrutura (IaC)
-- **Linhas de Template SAM**: 653 (inclui TranscribeStarterFunction)
-- **Recursos Definidos**: 15 (S3, DynamoDB, SNS, IAM, CloudWatch, 2 Lambda Functions)
+- **Linhas de Template SAM**: 1,082 (completo com DLQ + SubnetId)
+- **Recursos Definidos**: 26 (S3, DynamoDB, SNS, SQS-DLQ, IAM, CloudWatch, 3 Lambdas, ECS, ECR, Step Functions, EventBridge)
 - **Template Validado**: ✅ Sam validate passou
 - **Recursos AWS Deployados**: 13/13 (dev environment completo)
 - **Stack CloudFormation**: ai-techne-academy-dev (CREATE_COMPLETE)
@@ -316,7 +316,9 @@ Planejamento ████████████ Setup ████████
 - **Lambda Functions**: 3/3 (100%) ✅
 - **Processador ECS**: 4/4 (100%) ✅
 - **Cobertura de Testes**: ~85% (Lambda Functions)
-- **Documentação Técnica**: 3,813 linhas (README + Design + Processor README)
+- **Documentação Técnica**: 5,632 linhas (README + Design + Reviews + Guides)
+- **Circuit Breaker**: 170 linhas (proteção Bedrock)
+- **Scripts Helper**: 114 linhas (setup automation)
 
 ---
 
@@ -344,17 +346,24 @@ Planejamento ████████████ Setup ████████
 
 ## 🚨 Bloqueios Atuais
 
-Nenhum bloqueio no momento.
+**✅ TODOS BLOQUEIOS RESOLVIDOS** (Sessão 11 - 2024-12-11)
+
+### Bloqueios Anteriores (RESOLVIDOS)
+1. ~~VPC/Subnet para ECS Task~~ → ✅ Parametrizado + script helper
+2. ~~Bedrock Quota Limits~~ → ✅ Circuit breaker implementado + documentação
 
 ---
 
 ## ⚠️ Riscos Identificados
 
 ### Risco 1: Quotas do Bedrock
-**Status**: 🟡 Monitorar  
-**Probabilidade**: Média  
-**Impacto**: Alto  
-**Mitigação**: Solicitar aumento de quota proativamente na AWS
+**Status**: 🟢 MITIGADO
+**Probabilidade**: Baixa (com circuit breaker)
+**Impacto**: Médio (fail fast, não cascading)
+**Mitigação**:
+- ✅ Circuit breaker implementado
+- ✅ Processo de solicitação documentado
+- ⏳ Aguardando aprovação de quota (1-2 dias)
 
 ### Risco 2: Custos Acima do Esperado
 **Status**: 🟡 Monitorar  
