@@ -1,0 +1,173 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          ["AWS/States", "ExecutionsStarted", {"stat": "Sum", "label": "Started"}],
+          [".", "ExecutionsSucceeded", {"stat": "Sum", "label": "Succeeded"}],
+          [".", "ExecutionsFailed", {"stat": "Sum", "label": "Failed"}],
+          [".", "ExecutionsTimedOut", {"stat": "Sum", "label": "Timed Out"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Step Functions Executions",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          ["AWS/States", "ExecutionTime", {"stat": "Average"}],
+          ["...", {"stat": "Maximum"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Execution Duration (ms)",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          ["AWS/Lambda", "Invocations", {"stat": "Sum"}],
+          [".", "Errors", {"stat": "Sum"}],
+          [".", "Throttles", {"stat": "Sum"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Lambda Functions - All",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          ["AWS/Lambda", "Duration", {"stat": "Average"}],
+          ["...", {"stat": "Maximum"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Lambda Duration (ms)",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          ["AWS/ECS", "CPUUtilization", {"stat": "Average"}],
+          [".", "MemoryUtilization", {"stat": "Average"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "ECS Task Utilization",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          ["AWS/DynamoDB", "ConsumedReadCapacityUnits", {"stat": "Sum"}],
+          [".", "ConsumedWriteCapacityUnits", {"stat": "Sum"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "DynamoDB Capacity Units",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          ["AWS/SQS", "ApproximateNumberOfMessagesVisible", {"stat": "Average"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "DLQ Messages",
+        "period": 300,
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        },
+        "annotations": {
+          "horizontal": [
+            {
+              "value": 1,
+              "label": "Alert Threshold",
+              "color": "#d62728"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "log",
+      "properties": {
+        "query": "SOURCE '${ProcessorLogGroupName}'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 20",
+        "region": "${AWS::Region}",
+        "title": "Recent Errors - Processor",
+        "stacked": false
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          ["AITechneAcademy", "ProcessingDuration", {"stat": "Average"}],
+          [".", "TokensProcessed", {"stat": "Sum"}],
+          [".", "ProcessingCost", {"stat": "Sum"}]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Custom Metrics - Processing",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          ["AITechneAcademy", "ProcessingSuccess", {"stat": "Sum", "label": "Success"}],
+          [".", "ProcessingFailure", {"stat": "Sum", "label": "Failure"}],
+          [".", "PartialSuccess", {"stat": "Sum", "label": "Partial"}]
+        ],
+        "view": "timeSeries",
+        "stacked": true,
+        "region": "${AWS::Region}",
+        "title": "Processing Results",
+        "period": 300
+      }
+    }
+  ]
+}

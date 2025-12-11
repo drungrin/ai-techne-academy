@@ -844,6 +844,207 @@ Resources:
           RoleArn: !GetAtt EventBridgeRole.Arn
           Id: VideoProcessingStateMachine
 
+  # ========================================
+  # CloudWatch Dashboard
+  # ========================================
+  
+  MonitoringDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub '${ProjectName}-${Environment}'
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["AWS/States", "ExecutionsStarted", {"stat": "Sum", "label": "Started", "region": "${AWS::Region}"}],
+                  [".", "ExecutionsSucceeded", {"stat": "Sum", "label": "Succeeded", "region": "${AWS::Region}"}],
+                  [".", "ExecutionsFailed", {"stat": "Sum", "label": "Failed", "region": "${AWS::Region}"}],
+                  [".", "ExecutionsTimedOut", {"stat": "Sum", "label": "Timed Out", "region": "${AWS::Region}"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "Step Functions Executions",
+                "period": 300,
+                "yAxis": {"left": {"min": 0}}
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", {"stat": "Sum", "region": "${AWS::Region}"}],
+                  [".", "Errors", {"stat": "Sum", "region": "${AWS::Region}"}],
+                  [".", "Throttles", {"stat": "Sum", "region": "${AWS::Region}"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "Lambda Functions",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["AWS/ECS", "CPUUtilization", {"stat": "Average", "region": "${AWS::Region}"}],
+                  [".", "MemoryUtilization", {"stat": "Average", "region": "${AWS::Region}"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "ECS Task Utilization",
+                "period": 300,
+                "yAxis": {"left": {"min": 0, "max": 100}}
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["AWS/SQS", "ApproximateNumberOfMessagesVisible", {"stat": "Average", "region": "${AWS::Region}"}]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${AWS::Region}",
+                "title": "DLQ Messages",
+                "period": 300,
+                "annotations": {
+                  "horizontal": [{"value": 1, "label": "Alert", "color": "#d62728"}]
+                }
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "metrics": [
+                  ["AITechneAcademy", "ProcessingSuccess", {"stat": "Sum", "label": "Success"}],
+                  [".", "ProcessingFailure", {"stat": "Sum", "label": "Failure"}],
+                  [".", "PartialSuccess", {"stat": "Sum", "label": "Partial"}]
+                ],
+                "view": "timeSeries",
+                "stacked": true,
+                "region": "${AWS::Region}",
+                "title": "Processing Results",
+                "period": 300
+              }
+            }
+          ]
+        }
+
+  # ========================================
+  # CloudWatch Alarms
+  # ========================================
+  
+  HighFailureRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-high-failure-rate-${Environment}'
+      AlarmDescription: Alert when more than 3 executions fail in 5 minutes
+      MetricName: ExecutionsFailed
+      Namespace: AWS/States
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationTopic
+      Dimensions:
+        - Name: StateMachineArn
+          Value: !GetAtt ProcessingStateMachine.Arn
+
+  LambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-lambda-errors-${Environment}'
+      AlarmDescription: Alert when Lambda errors exceed threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationTopic
+
+  LambdaThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-lambda-throttles-${Environment}'
+      AlarmDescription: Alert when Lambda functions are throttled
+      MetricName: Throttles
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationTopic
+
+  DLQMessagesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-dlq-messages-${Environment}'
+      AlarmDescription: Alert when messages appear in Dead Letter Queue
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationTopic
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ProcessingDLQ.QueueName
+
+  ECSTaskFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-ecs-task-failure-${Environment}'
+      AlarmDescription: Alert when ECS tasks fail
+      MetricName: ExecutionsFailed
+      Namespace: AWS/States
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationTopic
+      Dimensions:
+        - Name: StateMachineArn
+          Value: !GetAtt ProcessingStateMachine.Arn
+
+  HighCostAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-high-cost-${Environment}'
+      AlarmDescription: Alert when processing cost exceeds $10/hour
+      MetricName: ProcessingCost
+      Namespace: AITechneAcademy
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref NotificationTopic
+
 # ========================================
 # Outputs
 # ========================================
@@ -1050,3 +1251,37 @@ Outputs:
   VideoUploadRuleName:
     Description: Name of the EventBridge rule
     Value: !Ref VideoUploadRule
+
+  # CloudWatch Monitoring
+  DashboardName:
+    Description: Name of the CloudWatch Dashboard
+    Value: !Ref MonitoringDashboard
+    Export:
+      Name: !Sub '${AWS::StackName}-Dashboard'
+
+  DLQArn:
+    Description: ARN of the Dead Letter Queue
+    Value: !GetAtt ProcessingDLQ.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-DLQ'
+
+  DLQUrl:
+    Description: URL of the Dead Letter Queue
+    Value: !Ref ProcessingDLQ
+
+  # CloudWatch Alarms
+  HighFailureRateAlarmArn:
+    Description: ARN of the high failure rate alarm
+    Value: !GetAtt HighFailureRateAlarm.Arn
+
+  LambdaErrorAlarmArn:
+    Description: ARN of the Lambda error alarm
+    Value: !GetAtt LambdaErrorAlarm.Arn
+
+  DLQMessagesAlarmArn:
+    Description: ARN of the DLQ messages alarm
+    Value: !GetAtt DLQMessagesAlarm.Arn
+
+  HighCostAlarmArn:
+    Description: ARN of the high cost alarm
+    Value: !GetAtt HighCostAlarm.Arn
