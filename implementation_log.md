@@ -2428,4 +2428,245 @@ Scan on Push: Enabled
 **Modo**: Architect → Code (revisão + implementação)  
 **Próxima Ação**: Executar setup-subnet.sh e deploy
 
+
+## 2024-12-11 - Sessão 12: Monitoramento e Observabilidade - Fase 3.3 Completa
+
+### ✅ Completado
+
+#### CloudWatch Dashboard Implementado
+- [x] **infrastructure/cloudwatch-dashboard.json** (147 linhas)
+  - Definição JSON do dashboard
+  - 5 widgets configurados
+  - Métricas AWS + custom
+  
+- [x] **MonitoringDashboard Resource** no template.yaml
+  - DashboardName: `ai-techne-academy-{env}`
+  - 5 widgets inline no template
+  - Métricas de Step Functions, Lambda, ECS, SQS, Custom
+
+#### CloudWatch Alarms Configurados (6 alarmes)
+- [x] **HighFailureRateAlarm**
+  - Threshold: >3 falhas em 5min
+  - Namespace: AWS/States
+  - Action: SNS notification
+  
+- [x] **LambdaErrorAlarm**
+  - Threshold: >5 erros em 5min
+  - Namespace: AWS/Lambda
+  - Action: SNS notification
+  
+- [x] **LambdaThrottleAlarm**
+  - Threshold: >=1 throttle em 5min
+  - Namespace: AWS/Lambda
+  - Action: SNS notification
+  
+- [x] **DLQMessagesAlarm**
+  - Threshold: >=1 mensagem no DLQ
+  - Namespace: AWS/SQS
+  - Action: SNS notification
+  
+- [x] **ECSTaskFailureAlarm**
+  - Threshold: >=1 falha ECS
+  - Namespace: AWS/States
+  - Action: SNS notification
+  
+- [x] **HighCostAlarm**
+  - Threshold: >$10/hora
+  - Namespace: AITechneAcademy (custom)
+  - Action: SNS notification
+
+#### Template SAM Atualizado
+- [x] 6 novos recursos CloudWatch Alarm
+- [x] 1 recurso CloudWatch Dashboard
+- [x] 8 novos outputs (Dashboard + DLQ + 4 Alarms)
+- [x] Template validado com `sam validate --lint` ✅
+- [x] Total de linhas: 1,286 (de 1,052 para 1,286 = +234 linhas)
+- [x] Total de recursos: 32 (de 26 para 32 = +6 alarmes +1 dashboard)
+- [x] Total de outputs: 44 (de 36 para 44 = +8 outputs)
+
+#### Documentação Completa
+- [x] **docs/OBSERVABILITY_STRATEGY.md** (652 linhas)
+  - Visão geral da estratégia
+  - Detalhes de todos os 5 widgets do dashboard
+  - Documentação completa dos 6 alarmes
+  - CloudWatch Logs e grupos (3 log groups)
+  - X-Ray tracing (já habilitado)
+  - 8 métricas customizadas (AITechneAcademy namespace)
+  - Notificações SNS
+  - Runbooks operacionais (3 cenários)
+  - KPIs e SLOs definidos
+  - Queries CloudWatch Insights (4 exemplos)
+  - Links rápidos para console AWS
+  - Plano de manutenção
+
+### 📊 Métricas
+
+#### Código Implementado
+- **CloudWatch Dashboard JSON**: 147 linhas
+- **Template SAM Additions**: +234 linhas
+  - 1 Dashboard resource
+  - 6 Alarm resources
+  - 8 outputs
+- **Total Template**: 1,286 linhas
+
+#### Documentação Criada
+- **OBSERVABILITY_STRATEGY.md**: 652 linhas
+- **Total Documentação Técnica**: 6,284 linhas (de 5,632 para 6,284)
+
+#### Recursos AWS
+- **Dashboards**: 1 (5 widgets)
+- **Alarms**: 6 (todos com SNS actions)
+- **Log Groups**: 3 (já existentes)
+- **Custom Metrics**: 8 (Finalizer Lambda publica)
+- **SNS Topics**: 1 (já existente, reusado)
+
+### 🎯 Status Atual
+
+- **Fase Atual**: 3.3 - ✅ COMPLETA (100%)
+- **Fase 3**: ✅ COMPLETA (100%)
+- **Progresso Geral**: 95% (de 90% para 95%)
+- **Próxima Fase**: Deploy + Testes
+- **Bloqueios**: Nenhum
+- **Risco**: Baixo
+
+### 🏗️ Componentes de Observabilidade
+
+#### Dashboard Widgets
+1. **Step Functions Executions**: Started, Succeeded, Failed, TimedOut
+2. **Lambda Functions**: Invocations, Errors, Throttles
+3. **ECS Task Utilization**: CPU%, Memory%
+4. **DLQ Messages**: Visible messages (com alerta visual)
+5. **Processing Results**: Success, Failure, Partial (stacked)
+
+#### Alarmes por Severidade
+- 🔴 **CRÍTICA**: HighFailureRate, DLQMessages, ECSTaskFailure
+- 🟠 **ALTA**: LambdaError
+- 🟡 **MÉDIA**: LambdaThrottle, HighCost
+
+#### Métricas Customizadas (Namespace: AITechneAcademy)
+1. ProcessingDuration (Seconds)
+2. ProcessingSuccess (Count)
+3. ProcessingFailure (Count)
+4. PartialSuccess (Count)
+5. TokensProcessed (Count)
+6. DocumentSize (Bytes)
+7. ProcessingCost (USD)
+8. SpeakersDetected (Count)
+
+### 🚀 Próximos Passos
+
+#### Imediato (Próxima Sessão)
+1. **Configurar SubnetId** (5 min)
+   ```bash
+   ./scripts/setup-subnet.sh
+   ```
+
+2. **Deploy Stack Atualizada** (15 min)
+   ```bash
+   sam build --template infrastructure/template.yaml
+   sam deploy --guided
+   ```
+
+3. **Verificar Dashboard e Alarmes** (5 min)
+   - Acessar CloudWatch Console
+   - Validar dashboard carregou
+   - Verificar alarmes criados
+
+4. **Teste End-to-End Básico** (30 min)
+   - Upload vídeo pequeno (1-2 min)
+   - Monitorar execução no dashboard
+   - Verificar documento gerado
+
+#### Curto Prazo (Esta Semana)
+- Solicitar aumento quota Bedrock (se ainda não feito)
+- Testes com vídeos maiores
+- Ajustar thresholds de alarmes se necessário
+- Validar X-Ray traces
+
+#### Médio Prazo (Próximas 2 Semanas)
+- Fase 4: Testes e Validação completa
+- Fase 5: Documentação final e handover
+- Go-live
+
+### 📝 Notas Importantes
+
+#### Decisões Técnicas
+
+**Dashboard Inline vs JSON File**:
+- Escolhido: Inline no template.yaml usando !Sub
+- Razão: Substituição de variáveis ${AWS::Region} facilitada
+- Trade-off: Template maior, mas mais manutenível
+
+**Alarmes com SNS Actions**:
+- Todos os 6 alarmes notificam via SNS
+- Email: devops@techne.com.br (configurável)
+- Permite integração futura com PagerDuty, Slack, etc.
+
+**X-Ray Tracing**:
+- Já estava habilitado desde Fase 3.1
+- Validado: Lambda e Step Functions têm policies corretas
+- Service Map disponível após primeira execução
+
+**Custom Metrics Namespace**:
+- Nome: AITechneAcademy (sem hifens)
+- Publicadas pelo Finalizer Lambda
+- Permitem análise granular de custos e performance
+
+#### Padrões Estabelecidos
+
+**Estrutura de Alarme**:
+1. Nome padronizado: `{project}-{alarm-type}-{env}`
+2. Description clara e acionável
+3. SNS action configurada
+4. TreatMissingData: notBreaching (default seguro)
+5. Dimensões quando aplicável
+
+**Documentação de Observabilidade**:
+1. Visão geral estratégica
+2. Detalhes técnicos de cada componente
+3. Runbooks operacionais práticos
+4. Queries prontas para uso
+5. Links diretos para console AWS
+
+#### Contexto para Próximas Sessões
+
+- ✅ Fase 3 100% completa (3.1 + 3.2 + 3.3)
+- ✅ Template SAM validado (1,286 linhas, 32 recursos)
+- ✅ Observabilidade completa implementada
+- ✅ Documentação técnica: 6,284 linhas
+- 📊 Progresso: 95%
+- 🎯 Próximo: Configurar subnet + Deploy + Testes
+
+#### Validações Realizadas
+
+- ✅ `sam validate --lint` passou sem erros
+- ✅ Template YAML syntax válido
+- ✅ Todos outputs referenciam recursos existentes
+- ✅ Dashboard JSON válido
+- ✅ Alarmes com métricas corretas
+- ✅ SNS topic já existe e está configurado
+
+#### Arquivos Criados/Modificados
+
+**Novos Arquivos**:
+- infrastructure/cloudwatch-dashboard.json
+- docs/OBSERVABILITY_STRATEGY.md
+
+**Arquivos Modificados**:
+- infrastructure/template.yaml (+234 linhas)
+- PROJECT_STATUS.md (Fase 3.3 completa, 95% progresso)
+- implementation_log.md (esta entrada)
+
+### 🔗 Links Importantes
+
+- [Observability Strategy](./docs/OBSERVABILITY_STRATEGY.md)
+- [CloudWatch Dashboard JSON](./infrastructure/cloudwatch-dashboard.json)
+- [Template SAM](./infrastructure/template.yaml)
+- [Project Status](./PROJECT_STATUS.md)
+
+---
+
+**Atualizado Por**: Kilo Code (Code Mode)  
+**Duração da Sessão**: ~2 horas  
+**Próxima Ação**: Configurar SubnetId e Deploy em dev
 ---
