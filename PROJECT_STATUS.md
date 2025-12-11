@@ -1,11 +1,11 @@
 # AI Techne Academy - Status do Projeto
 
-**Última Atualização**: 2024-12-10 23:46 UTC
-**Status Geral**: ✅ Fase 1 Completa - Infraestrutura AWS Deployada
+**Última Atualização**: 2024-12-11 12:54 UTC
+**Status Geral**: 🔄 Fase 2 Em Progresso - Desenvolvimento Core Iniciado
 
 ---
 
-## 📊 Progresso Geral: 50%
+## 📊 Progresso Geral: 55%
 
 ```
 ████████████████████░░░░░░░░░░░░░░░░░░░░ 50%
@@ -90,20 +90,46 @@ Planejamento ████████████ Setup ████████
 
 ---
 
-### ⏸️ Fase 2: Desenvolvimento Core (0%)
+### 🔄 Fase 2: Desenvolvimento Core (11%)
 
-**Duração Estimada**: 2 semanas (Dias 6-15)  
-**Status**: ⏸️ Aguardando Fase 1
+**Duração Estimada**: 2 semanas (Dias 6-15)
+**Status**: 🔄 Em Progresso
 
-#### Resumo de Tarefas
-- [ ] 2.1 Lambda Functions (3 dias)
-  - Trigger, Transcribe Starter, Finalizer
-- [ ] 2.2 Processador ECS (5 dias)
-  - main.py, llm_client.py, document_generator.py, transcription_parser.py
-- [ ] 2.3 Containerização (2 dias)
-  - Dockerfile, docker-compose, ECR setup
+#### Tarefas Completadas
 
-**Pré-requisitos**: Fase 1 completa
+##### 2.1 Lambda Functions (1/3 - 33%) 🔄
+- [x] **Trigger Function** (377 linhas)
+  - Validação de formato de vídeo (mp4, mov, avi, mkv, webm, flv, m4v)
+  - Validação de tamanho (máximo 5 GB)
+  - Extração de metadados
+  - Criação de tracking record no DynamoDB
+  - Suporte a EventBridge S3 notifications
+  - Testes unitários (236 linhas)
+  - README completo
+- [ ] **Transcribe Starter Function**
+- [ ] **Finalizer Function**
+
+**Progresso**: 33% (1/3 funções)
+**Duração Real**: 1.5 horas
+**Responsável**: Kilo Code
+**Status**: 🔄 Em Progresso
+
+##### 2.2 Processador ECS (0/4 - 0%) ⏸️
+- [ ] main.py
+- [ ] llm_client.py
+- [ ] document_generator.py
+- [ ] transcription_parser.py
+
+**Status**: ⏸️ Aguardando Lambda Functions
+
+##### 2.3 Containerização (0/3 - 0%) ⏸️
+- [ ] Dockerfile
+- [ ] docker-compose
+- [ ] ECR setup
+
+**Status**: ⏸️ Aguardando Processador ECS
+
+**Pré-requisitos**: Fase 1 completa ✅
 
 ---
 
@@ -167,25 +193,29 @@ Planejamento ████████████ Setup ████████
 - **Stack CloudFormation**: ai-techne-academy-dev (CREATE_COMPLETE)
 - **Ambientes Configurados**: 1/3 (dev ✅, staging, prod)
 
-### Código (a iniciar)
-- **Linhas de Código**: 0
-- **Testes Criados**: 0
-- **Cobertura de Testes**: 0%
+### Código
+- **Linhas de Código Python**: 377 (Lambda Trigger)
+- **Linhas de Testes**: 236 (test_trigger.py)
+- **Lambda Functions**: 1/3 (33%)
+- **Cobertura de Testes**: ~80% (estimado)
 
 ---
 
 ## 🎯 Objetivos Atuais
 
 ### Objetivo Imediato
-**Iniciar Fase 2: Implementar Lambda Functions**
+**Continuar Fase 2: Implementar Lambda Transcribe Starter Function**
 
 ### Próxima Sessão
-1. **Confirmar subscrição SNS** via email (devops@techne.com.br)
-2. **Implementar primeira Lambda Function** (Trigger)
-   - Função que responde a upload de vídeo no S3
-   - Validação de arquivo
-   - Inicia Step Functions execution
-3. **Testar localmente** com SAM Local
+1. **Implementar Lambda Transcribe Starter Function**
+   - Iniciar job de transcrição no AWS Transcribe
+   - Configurar speaker identification
+   - Registrar job no DynamoDB
+2. **Implementar Lambda Finalizer Function**
+   - Atualizar status final no DynamoDB
+   - Publicar notificação SNS
+   - Registrar métricas CloudWatch
+3. **Testar Lambda Trigger localmente** com SAM Local
 
 ### Esta Semana
 - Completar 3 Lambda functions (Trigger, Transcribe Starter, Finalizer)
