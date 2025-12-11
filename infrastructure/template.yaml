@@ -487,6 +487,31 @@ Resources:
         Environment: !Ref Environment
         ManagedBy: SAM
         Function: Trigger
+  TranscribeStarterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-transcribe-starter-${Environment}'
+      Description: Starts AWS Transcribe jobs with speaker identification
+      CodeUri: ../src/functions/transcribe/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Timeout: 60
+      MemorySize: 256
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          TRACKING_TABLE: !Ref ProcessingTrackingTable
+          OUTPUT_BUCKET: !Ref TranscriptionBucket
+          LANGUAGE_CODE: pt-BR
+          MAX_SPEAKERS: 10
+          ENVIRONMENT: !Ref Environment
+          LOG_LEVEL: INFO
+      Tags:
+        Project: !Ref ProjectName
+        Environment: !Ref Environment
+        ManagedBy: SAM
+        Function: TranscribeStarter
+
 
 
 # ========================================
@@ -549,6 +574,16 @@ Outputs:
     Value: !GetAtt ProcessingTrackingTable.StreamArn
     Export:
       Name: !Sub '${AWS::StackName}-TrackingTableStream'
+
+  TranscribeStarterFunctionArn:
+    Description: ARN of the Transcribe Starter Lambda function
+    Value: !GetAtt TranscribeStarterFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-TranscribeStarterFunction'
+
+  TranscribeStarterFunctionName:
+    Description: Name of the Transcribe Starter Lambda function
+    Value: !Ref TranscribeStarterFunction
 
   # SNS
   NotificationTopicArn:
