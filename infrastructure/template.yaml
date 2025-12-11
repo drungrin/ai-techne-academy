@@ -511,6 +511,32 @@ Resources:
         Environment: !Ref Environment
         ManagedBy: SAM
         Function: TranscribeStarter
+  FinalizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-finalizer-${Environment}'
+      Description: Finalizes execution by updating status, sending notifications, and recording metrics
+      CodeUri: ../src/functions/finalizer/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Timeout: 90
+      MemorySize: 256
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          TRACKING_TABLE: !Ref ProcessingTrackingTable
+          NOTIFICATION_TOPIC_ARN: !Ref NotificationTopic
+          OUTPUT_BUCKET: !Ref OutputBucket
+          ENVIRONMENT: !Ref Environment
+          LOG_LEVEL: INFO
+          MAX_RETRY_ATTEMPTS: 3
+          RETRY_DELAY_BASE: 1
+      Tags:
+        Project: !Ref ProjectName
+        Environment: !Ref Environment
+        ManagedBy: SAM
+        Function: Finalizer
+
 
 
 
@@ -584,6 +610,16 @@ Outputs:
   TranscribeStarterFunctionName:
     Description: Name of the Transcribe Starter Lambda function
     Value: !Ref TranscribeStarterFunction
+
+  FinalizerFunctionArn:
+    Description: ARN of the Finalizer Lambda function
+    Value: !GetAtt FinalizerFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-FinalizerFunction'
+
+  FinalizerFunctionName:
+    Description: Name of the Finalizer Lambda function
+    Value: !Ref FinalizerFunction
 
   # SNS
   NotificationTopicArn:
