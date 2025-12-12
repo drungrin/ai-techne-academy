@@ -22,7 +22,7 @@ import logging
 import re
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import io
 
 from docx import Document
@@ -670,7 +670,7 @@ Use destaques (callouts), tabelas e listas quando melhorar o entendimento.
             ContentType='text/markdown',
             Metadata={
                 'execution_id': execution_id,
-                'generated_at': datetime.utcnow().isoformat(),
+                'generated_at': datetime.now(timezone.utc).isoformat(),
                 'content_length': str(len(markdown_content))
             }
         )
@@ -690,7 +690,7 @@ Use destaques (callouts), tabelas e listas quando melhorar o entendimento.
             ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             Metadata={
                 'execution_id': execution_id,
-                'generated_at': datetime.utcnow().isoformat()
+                'generated_at': datetime.now(timezone.utc).isoformat()
             }
         )
         logger.info(f"DOCX saved: {docx_uri}")
