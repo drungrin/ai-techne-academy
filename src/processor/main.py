@@ -150,10 +150,11 @@ def update_dynamodb_status(
             'updated_at': datetime.now(timezone.utc).isoformat(),
         }
     
-    # Add error if present
+    # Add error if present (error is a reserved keyword)
     if error:
-        update_expression += ", error = :error"
+        update_expression += ", #error = :error"
         expression_values[':error'] = error
+        expression_names['#error'] = 'error'
     
     try:
         table.update_item(
