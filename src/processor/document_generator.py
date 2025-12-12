@@ -17,21 +17,18 @@ Author: AI Techne Academy
 Version: 1.2.0 (Optimized for High-Context Models)
 """
 
+import io
 import json
 import logging
 import re
-from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import io
+from typing import Dict, Any, List, Optional, Tuple
 
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.style import WD_STYLE_TYPE
 
-from transcription_parser import TranscriptionParser, TranscriptionChunk
 from llm_client import BedrockLLMClient, TokenUsage, create_xml_prompt
+from transcription_parser import TranscriptionParser, TranscriptionChunk
 
 logger = logging.getLogger(__name__)
 
@@ -309,31 +306,28 @@ class DocumentGenerator:
     ) -> StageResult:
         """
         Stage 2: Extract technical content using LLM.
-        Adjusted to output explicit JSON keys instead of confusing XML tags.
         """
         logger.info("Stage 2: Extracting technical content")
         start_time = datetime.now()
         self.llm.set_stage_context("stage-2")
 
         prompt = create_xml_prompt(
-            task="Você é um Especialista em Documentação Técnica de Software. Analise a transcrição fornecida e extraia conteúdo técnico em formato JSON.",
+            task="Você é um Analista Técnico de QA. Analise a transcrição e extraia fatos técnicos comprovados.",
             instructions="""Ignore diálogos sociais. Concentre-se exclusivamente no conteúdo técnico.
+
+<CRITICAL_RULES>
+1. GROUNDING: Se um comando (ex: SQL, Bash) não for soletrado ou lido explicitamente, NÃO O INVENTE.
+2. GUI vs CLI: Se o usuário diz "cliquei aqui", classifique como "Ação de Interface Gráfica", não invente um comando de terminal equivalente.
+</CRITICAL_RULES>
             
 Gere um objeto JSON contendo as seguintes chaves (keys):
 
-1. "diagnostics": Lista de objetos. Cada objeto deve ter:
-   - "error_code": Código ou mensagem do erro.
-   - "root_cause": A causa explicada.
-
-2. "solutions": Lista de strings descrevendo passos técnicos, comandos e configurações executadas.
-
-3. "risks": Lista de strings com avisos sobre concorrência, ambiente compartilhado ou efeitos colaterais.
-
-4. "business_rules": Lista de strings explicando o comportamento do sistema (o "porquê").
-
-5. "configurations": Lista de convenções de nomenclatura, prefixos e configs de ferramentas.
+1. "diagnostics": Lista de objetos (error_code, root_cause).
+2. "solutions": Lista de strings descrevendo passos técnicos. *Nota: Se for uma ação visual, descreva a ação (ex: "Clicar no botão processar"), não invente código.*
+3. "risks": Avisos sobre concorrência/segurança.
+4. "configurations": Convenções de nomenclatura e configs.
 """,
-            output_format="Responda APENAS com o JSON válido. Não use Markdown ou tags XML na resposta.",
+            output_format="Responda APENAS com o JSON válido.",
             input_data=cleaned_transcription,
             input_tag="transcription"
         )
@@ -516,29 +510,25 @@ O objetivo é criar um esqueleto organizado para aprovação.
         self.llm.set_stage_context("stage-5")
 
         prompt = create_xml_prompt(
-            task="Atue como um Redator Técnico Sênior. Escreva um Documento de Treinamento e Troubleshooting completo em Markdown.",
+            task="Atue como um Redator Técnico Sênior. Escreva um Documento de Treinamento e Troubleshooting baseando-se ESTRITAMENTE no outline fornecido.",
             instructions="""<guidelines>
-- Tom: Profissional, instrucional, direto (imperativo: 'Faça', 'Configure', 'Verifique')
-- Clareza: Acessível para iniciantes. Explique o 'porquê', não apenas o 'como'
-- Formatação: Use code blocks, negrito para ênfase, blockquotes para avisos críticos
-- Exaustividade: Você tem alta capacidade de output. Não resuma. Escreva todos os detalhes técnicos necessários.
+- Tom: Profissional e instrucional.
+- Clareza: Explique o 'porquê'.
+- Formatação: Use Markdown padrão.
 </guidelines>
 
-<required_structure>
-Siga estritamente o outline fornecido, expandindo cada ponto em parágrafos técnicos detalhados.
-Inclua:
-1. Introdução
-2. Desenvolvimento (Conceitos, Troubleshooting, Procedimentos, Melhores Práticas, Segurança)
-3. Encerramento
-4. FAQ
-</required_structure>
+<ANTI_HALLUCINATION_PROTOCOL>
+1. **NÃO INVENTE COMANDOS:** Se o outline diz "Executar contagem", e não há um comando explícito (como `bash run.sh`), assuma que é uma ação de interface (botão/menu). Descreva a ação generica (ex: "Execute a rotina de contagem").
+2. **INTERFACE VISUAL:** Como você está processando texto de um vídeo, você não vê a tela. Quando o texto sugere uma ação visual (cliques, janelas, menus) que não pode ser descrita com precisão apenas pelo áudio:
+   - **OBRIGATÓRIO:** Insira a tag `> 📸 **[INSERIR PRINT AQUI: Descrição da tela ou botão mencionado]**`
+   - Não tente adivinhar o nome do menu se ele não foi dito.
+3. **INCERTEZA:** Se um passo técnico faltar, escreva: "> ⚠️ **Nota:** Verifique a documentação oficial para o comando exato desta etapa."
+</ANTI_HALLUCINATION_PROTOCOL>
 
-<quality_checklist>
-- Texto objetivo e didático
-- Títulos de seção claros
-- Apenas informações relevantes
-- Sem termos ofensivos ou piadas internas
-</quality_checklist>""",
+<required_structure>
+Siga estritamente o outline. Expanda os pontos, mas respeite o PROTOCOLO acima.
+Não crie código (CLI/SQL) a menos que ele esteja explícito no input.
+</required_structure>""",
             output_format="Gere o documento completo em Markdown AGORA.",
             input_data=document_outline,
             input_tag="document_outline"
