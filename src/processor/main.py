@@ -113,6 +113,9 @@ def load_config() -> Dict[str, str]:
     config['MAX_TOKENS_PER_CHUNK'] = int(
         os.environ.get('MAX_TOKENS_PER_CHUNK', '100000')
     )
+    config['MAX_OUTPUT_TOKENS'] = int(
+        os.environ.get('MAX_OUTPUT_TOKENS', '65536')  # 64K default
+    )
     
     logger.info(f"Configuration loaded: {list(config.keys())}")
     return config
@@ -256,7 +259,8 @@ def process_video_transcription() -> Dict[str, Any]:
         generator = DocumentGenerator(
             llm_client=llm_client,
             parser=parser,
-            s3_client=s3_client
+            s3_client=s3_client,
+            max_output_tokens=config['MAX_OUTPUT_TOKENS']
         )
         
         logger.info("Components initialized successfully")

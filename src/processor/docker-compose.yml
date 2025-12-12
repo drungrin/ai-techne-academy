@@ -23,6 +23,7 @@ services:
       - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-anthropic.claude-sonnet-4-5-20250929-v1:0}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - MAX_TOKENS_PER_CHUNK=${MAX_TOKENS_PER_CHUNK:-100000}
+      - MAX_OUTPUT_TOKENS=${MAX_OUTPUT_TOKENS:-65536}
       - ENVIRONMENT=${ENVIRONMENT:-dev}
       
       # Python Configuration

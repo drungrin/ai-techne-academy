@@ -73,15 +73,25 @@ S3 Transcription → Parse → Chunk → Stage 1-5 (LLM) → Stage 6 (Output) �
 
 ## Pipeline de 6 Etapas
 
+### Distribuição de Tokens por Etapa
+
+O processador suporta modelos com até 64K tokens de output (configurável via `MAX_OUTPUT_TOKENS`). A distribuição entre etapas é:
+
+- **Etapa 2**: 25% do max (16K tokens) - JSON de extração técnica
+- **Etapa 3**: 50% do max (32K tokens) - Mapeamento problema-solução (mais complexo)
+- **Etapa 4**: 25% do max (16K tokens) - Outline do documento
+- **Etapa 5**: 100% do max (64K tokens) - Documento completo em Markdown
+
 ### Etapa 1: Limpeza da Transcrição
 
 - Parse do JSON do AWS Transcribe
 - Formatação com timestamps e speakers
 - Remoção de ruído (conversas não técnicas)
 
-**Input**: JSON do Transcribe  
-**Output**: Texto limpo formatado  
+**Input**: JSON do Transcribe
+**Output**: Texto limpo formatado
 **LLM**: Não (processamento local)
+**Max Tokens**: N/A
 
 ### Etapa 2: Extração de Conteúdo Técnico
 
@@ -91,9 +101,10 @@ S3 Transcription → Parse → Chunk → Stage 1-5 (LLM) → Stage 6 (Output) �
 - Regras de negócio
 - Configurações
 
-**Input**: Texto limpo  
-**Output**: JSON estruturado  
+**Input**: Texto limpo
+**Output**: JSON estruturado
 **LLM**: Sim (Claude Sonnet 4)
+**Max Tokens**: 25% do MAX_OUTPUT_TOKENS (default: 16K)
 
 ### Etapa 3: Mapeamento de Soluções
 
@@ -101,9 +112,10 @@ S3 Transcription → Parse → Chunk → Stage 1-5 (LLM) → Stage 6 (Output) �
 - Medidas preventivas
 - Passos de debugging
 
-**Input**: JSON técnico da Etapa 2  
-**Output**: JSON com mapeamentos  
+**Input**: JSON técnico da Etapa 2
+**Output**: JSON com mapeamentos
 **LLM**: Sim (Claude Sonnet 4)
+**Max Tokens**: 50% do MAX_OUTPUT_TOKENS (default: 32K)
 
 ### Etapa 4: Estruturação do Documento
 
@@ -111,9 +123,10 @@ S3 Transcription → Parse → Chunk → Stage 1-5 (LLM) → Stage 6 (Output) �
 - Organização em seções lógicas
 - Definição de estrutura (sem conteúdo)
 
-**Input**: JSON de soluções da Etapa 3  
-**Output**: Outline estruturado  
+**Input**: JSON de soluções da Etapa 3
+**Output**: Outline estruturado
 **LLM**: Sim (Claude Sonnet 4)
+**Max Tokens**: 25% do MAX_OUTPUT_TOKENS (default: 16K)
 
 ### Etapa 5: Redação do Conteúdo
 
@@ -121,9 +134,10 @@ S3 Transcription → Parse → Chunk → Stage 1-5 (LLM) → Stage 6 (Output) �
 - Tom profissional e didático
 - Formatação rica (code blocks, tabelas, listas)
 
-**Input**: Outline da Etapa 4  
-**Output**: Documento Markdown completo  
-**LLM**: Sim (Claude Sonnet 4, max_tokens=8192)
+**Input**: Outline da Etapa 4
+**Output**: Documento Markdown completo
+**LLM**: Sim (Claude Sonnet 4)
+**Max Tokens**: 100% do MAX_OUTPUT_TOKENS (default: 64K)
 
 ### Etapa 6: Geração de Outputs
 
@@ -132,9 +146,10 @@ S3 Transcription → Parse → Chunk → Stage 1-5 (LLM) → Stage 6 (Output) �
 - Salvar DOCX no S3
 - Validação de outputs
 
-**Input**: Markdown da Etapa 5  
-**Output**: Arquivos `.md` e `.docx` no S3  
+**Input**: Markdown da Etapa 5
+**Output**: Arquivos `.md` e `.docx` no S3
 **LLM**: Não (processamento local)
+**Max Tokens**: N/A
 
 ---
 
@@ -257,6 +272,7 @@ print(f"DOCX: {result.docx_s3_uri}")
 | `BEDROCK_MODEL_ID` | ID do modelo Bedrock | `anthropic.claude-sonnet-4-5-20250929-v1:0` |
 | `LOG_LEVEL` | Nível de log | `INFO` |
 | `MAX_TOKENS_PER_CHUNK` | Max tokens por chunk | `100000` |
+| `MAX_OUTPUT_TOKENS` | Max output tokens do modelo | `65536` (64K) |
 
 ### IAM Permissions
 
