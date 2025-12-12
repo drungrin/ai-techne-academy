@@ -4,8 +4,27 @@ ECS Processor Main Entry Point
 This is the main entry point for the ECS Fargate task that processes
 video transcriptions and generates technical training documents.
 
+The processor reads all configuration from environment variables and
+runs as a standalone CLI application in the ECS container.
+
+Required Environment Variables:
+- EXECUTION_ID: Unique execution identifier
+- VIDEO_S3_URI: S3 URI of the video file
+- TRANSCRIPTION_S3_URI: S3 URI of the transcription JSON file
+- TRACKING_TABLE: DynamoDB table name
+- OUTPUT_BUCKET: S3 bucket for outputs
+
+Optional Environment Variables:
+- AWS_REGION: AWS region (default: us-east-1)
+- BEDROCK_MODEL_ID: Bedrock model identifier
+- LOG_LEVEL: Logging level (default: INFO)
+- MAX_TOKENS_PER_CHUNK: Maximum tokens per chunk (default: 100000)
+
+Usage:
+    python main.py
+
 Author: AI Techne Academy
-Version: 1.0.0
+Version: 2.0.0
 """
 
 import os
@@ -51,12 +70,15 @@ def load_config() -> Dict[str, str]:
     Load configuration from environment variables.
     
     Required environment variables:
+    - EXECUTION_ID: Unique execution identifier
+    - VIDEO_S3_URI: S3 URI of the video file (for tracking)
+    - TRANSCRIPTION_S3_URI: S3 URI of the transcription JSON file
     - TRACKING_TABLE: DynamoDB table name
     - OUTPUT_BUCKET: S3 bucket for outputs
-    - AWS_REGION: AWS region (default: us-east-1)
-    - BEDROCK_MODEL_ID: Bedrock model identifier
     
     Optional:
+    - AWS_REGION: AWS region (default: us-east-1)
+    - BEDROCK_MODEL_ID: Bedrock model identifier (default: anthropic.claude-sonnet-4-5-20250929-v1:0)
     - LOG_LEVEL: Logging level (default: INFO)
     - MAX_TOKENS_PER_CHUNK: Maximum tokens per chunk (default: 100000)
     
@@ -66,7 +88,13 @@ def load_config() -> Dict[str, str]:
     Raises:
         ConfigurationError: If required variables are missing
     """
-    required_vars = ['TRACKING_TABLE', 'OUTPUT_BUCKET']
+    required_vars = [
+        'EXECUTION_ID',
+        'VIDEO_S3_URI',
+        'TRANSCRIPTION_S3_URI',
+        'TRACKING_TABLE',
+        'OUTPUT_BUCKET'
+    ]
     config = {}
     
     for var in required_vars:
@@ -88,30 +116,6 @@ def load_config() -> Dict[str, str]:
     
     logger.info(f"Configuration loaded: {list(config.keys())}")
     return config
-
-
-def validate_event(event: Dict[str, Any]) -> None:
-    """
-    Validate input event structure.
-    
-    Required fields:
-    - execution_id
-    - transcription_s3_uri
-    - video_s3_uri (for tracking)
-    
-    Args:
-        event: Input event dictionary
-        
-    Raises:
-        ConfigurationError: If event is invalid
-    """
-    required_fields = ['execution_id', 'transcription_s3_uri', 'video_s3_uri']
-    
-    for field in required_fields:
-        if field not in event:
-            raise ConfigurationError(f"Missing required event field: {field}")
-    
-    logger.info(f"Event validated: execution_id={event['execution_id']}")
 
 
 def update_dynamodb_status(
@@ -169,17 +173,12 @@ def update_dynamodb_status(
         # Don't raise - this is non-critical
 
 
-def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def process_video_transcription() -> Dict[str, Any]:
     """
-    Main handler for ECS task.
+    Main processing function for ECS task.
     
-    Event format (from Step Functions):
-    {
-        "execution_id": "uuid",
-        "video_s3_uri": "s3://bucket/video.mp4",
-        "transcription_s3_uri": "s3://bucket/transcription.json",
-        "video_metadata": {...}
-    }
+    Reads configuration from environment variables and processes
+    video transcription to generate technical training documents.
     
     Returns:
         {
@@ -205,30 +204,28 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     start_time = datetime.now()
     
     try:
-        # 1. Load configuration
-        logger.info("Step 1: Loading configuration")
+        # 1. Load configuration from environment variables
+        logger.info("Step 1: Loading configuration from environment variables")
         config = load_config()
         
-        # 2. Validate event
-        logger.info("Step 2: Validating event")
-        validate_event(event)
-        
-        execution_id = event['execution_id']
-        transcription_uri = event['transcription_s3_uri']
+        execution_id = config['EXECUTION_ID']
+        transcription_uri = config['TRANSCRIPTION_S3_URI']
+        video_uri = config['VIDEO_S3_URI']
         output_bucket = config['OUTPUT_BUCKET']
         
         logger.info(f"Processing execution: {execution_id}")
+        logger.info(f"Video URI: {video_uri}")
         logger.info(f"Transcription URI: {transcription_uri}")
         logger.info(f"Output bucket: {output_bucket}")
         
-        # 3. Initialize AWS clients
-        logger.info("Step 3: Initializing AWS clients")
+        # 2. Initialize AWS clients
+        logger.info("Step 2: Initializing AWS clients")
         region = config['AWS_REGION']
         s3_client = boto3.client('s3', region_name=region)
         dynamodb = boto3.resource('dynamodb', region_name=region)
         
-        # 4. Update DynamoDB: PROCESSING
-        logger.info("Step 4: Updating DynamoDB status -> PROCESSING")
+        # 3. Update DynamoDB: PROCESSING
+        logger.info("Step 3: Updating DynamoDB status -> PROCESSING")
         update_dynamodb_status(
             dynamodb=dynamodb,
             table_name=config['TRACKING_TABLE'],
@@ -240,8 +237,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         )
         
-        # 5. Initialize processing components
-        logger.info("Step 5: Initializing processing components")
+        # 4. Initialize processing components
+        logger.info("Step 4: Initializing processing components")
         
         parser = TranscriptionParser(
             max_tokens_per_chunk=config['MAX_TOKENS_PER_CHUNK']
@@ -264,8 +261,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         logger.info("Components initialized successfully")
         
-        # 6. Generate document (main processing)
-        logger.info("Step 6: Starting document generation pipeline")
+        # 5. Generate document (main processing)
+        logger.info("Step 5: Starting document generation pipeline")
         logger.info("-" * 80)
         
         result = generator.generate_document(
@@ -277,8 +274,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.info("-" * 80)
         logger.info("Document generation completed successfully")
         
-        # 7. Update DynamoDB: COMPLETED
-        logger.info("Step 7: Updating DynamoDB status -> COMPLETED")
+        # 6. Update DynamoDB: COMPLETED
+        logger.info("Step 6: Updating DynamoDB status -> COMPLETED")
         update_dynamodb_status(
             dynamodb=dynamodb,
             table_name=config['TRACKING_TABLE'],
@@ -300,7 +297,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             }
         )
         
-        # 8. Prepare response
+        # 7. Prepare response
         total_duration = (datetime.now() - start_time).total_seconds()
         
         response_body = {
@@ -348,12 +345,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         # Try to update DynamoDB
         try:
-            execution_id = event.get('execution_id')
-            if execution_id:
+            if 'config' in locals():
                 update_dynamodb_status(
                     dynamodb=boto3.resource('dynamodb', region_name=config.get('AWS_REGION', 'us-east-1')),
                     table_name=config.get('TRACKING_TABLE', ''),
-                    execution_id=execution_id,
+                    execution_id=config.get('EXECUTION_ID', ''),
                     status='FAILED',
                     error=error_msg
                 )
@@ -374,12 +370,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         # Try to update DynamoDB
         try:
-            execution_id = event.get('execution_id')
-            if execution_id and 'config' in locals():
+            if 'config' in locals():
                 update_dynamodb_status(
                     dynamodb=boto3.resource('dynamodb', region_name=config.get('AWS_REGION', 'us-east-1')),
                     table_name=config.get('TRACKING_TABLE', ''),
-                    execution_id=execution_id,
+                    execution_id=config.get('EXECUTION_ID', ''),
                     status='FAILED',
                     error=error_msg
                 )
@@ -397,32 +392,53 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 def main():
     """
-    CLI entry point for local testing.
+    Main entry point for ECS processor.
     
-    Usage:
-        python main.py '{"execution_id": "test-123", ...}'
+    Reads configuration from environment variables and processes
+    video transcription to generate technical training documents.
+    
+    Required environment variables:
+    - EXECUTION_ID: Unique execution identifier
+    - VIDEO_S3_URI: S3 URI of the video file
+    - TRANSCRIPTION_S3_URI: S3 URI of the transcription JSON file
+    - TRACKING_TABLE: DynamoDB table name
+    - OUTPUT_BUCKET: S3 bucket for outputs
+    
+    Optional environment variables:
+    - AWS_REGION: AWS region (default: us-east-1)
+    - BEDROCK_MODEL_ID: Bedrock model identifier
+    - LOG_LEVEL: Logging level (default: INFO)
+    - MAX_TOKENS_PER_CHUNK: Maximum tokens per chunk (default: 100000)
+    
+    Exit codes:
+    - 0: Success
+    - 1: Configuration error
+    - 2: Processing error
+    - 3: Unexpected error
     """
-    if len(sys.argv) < 2:
-        print("Usage: python main.py '<json_event>'")
-        print("\nExample:")
-        print('  python main.py \'{"execution_id": "test-123", '
-              '"transcription_s3_uri": "s3://bucket/file.json", '
-              '"video_s3_uri": "s3://bucket/video.mp4"}\'')
-        sys.exit(1)
-    
     try:
-        event = json.loads(sys.argv[1])
-        result = lambda_handler(event, None)
+        result = process_video_transcription()
         print("\n" + "=" * 80)
-        print("RESULT:")
+        print("PROCESSING RESULT:")
         print(json.dumps(result, indent=2))
         print("=" * 80)
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON: {e}")
+        
+        if result.get('statusCode') == 200:
+            sys.exit(0)
+        elif result.get('statusCode') == 400:
+            sys.exit(1)
+        else:
+            sys.exit(2)
+            
+    except ConfigurationError as e:
+        logger.error(f"Configuration error: {e}")
         sys.exit(1)
+    except ProcessingError as e:
+        logger.error(f"Processing error: {e}")
+        sys.exit(2)
     except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+        logger.exception(f"Unexpected error: {e}")
+        sys.exit(3)
 
 
 if __name__ == '__main__':
