@@ -144,6 +144,12 @@ class DocumentGenerator:
             final_stage = stage_results[-1]
             markdown_content = final_stage.output
             
+            # Check if final stage failed
+            if markdown_content is None or final_stage.status == 'failed':
+                error_msg = final_stage.error or "Final stage produced no output"
+                logger.error(f"Cannot generate output: {error_msg}")
+                raise Exception(f"Document generation failed: {error_msg}")
+            
             # Stage 6: Generate outputs
             stage_6_start = datetime.now()
             markdown_uri, docx_uri = self._stage_6_generate_outputs(
