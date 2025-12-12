@@ -137,7 +137,7 @@ def update_dynamodb_status(
     update_expression = "SET #status = :status, updated_at = :updated_at"
     expression_values = {
         ':status': status,
-        ':updated_at': datetime.utcnow().isoformat()
+        ':updated_at': datetime.now(timezone.utc).isoformat()
     }
     expression_names = {'#status': 'status'}
     
@@ -146,8 +146,7 @@ def update_dynamodb_status(
         update_expression += ", processing_stages.processor = :processor_data"
         expression_values[':processor_data'] = {
             'status': status,
-            'updated_at': datetime.utcnow().isoformat(),
-            **data
+            'updated_at': datetime.now(timezone.utc).isoformat(),
         }
     
     # Add error if present
@@ -234,7 +233,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             execution_id=execution_id,
             status='PROCESSING',
             data={
-                'started_at': datetime.utcnow().isoformat(),
+                'started_at': datetime.now(timezone.utc).isoformat(),
                 'processor_version': '1.0.0'
             }
         )
@@ -284,7 +283,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             execution_id=execution_id,
             status='COMPLETED',
             data={
-                'completed_at': datetime.utcnow().isoformat(),
+                'completed_at': datetime.now(timezone.utc).isoformat(),
                 'markdown_s3_uri': result.markdown_s3_uri,
                 'docx_s3_uri': result.docx_s3_uri,
                 'tokens_used': {
