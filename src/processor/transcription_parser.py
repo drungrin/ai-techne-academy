@@ -531,17 +531,36 @@ def parse_s3_uri(s3_uri: str) -> Tuple[str, str]:
     """
     Parse S3 URI into bucket and key.
     
+    Supports both formats:
+    - s3://bucket/key
+    - https://s3.region.amazonaws.com/bucket/key
+    - https://bucket.s3.region.amazonaws.com/key
+    
     Args:
-        s3_uri: S3 URI (s3://bucket/key)
+        s3_uri: S3 URI in any supported format
         
     Returns:
         Tuple of (bucket, key)
     """
-    if not s3_uri.startswith('s3://'):
-        raise ValueError(f"Invalid S3 URI: {s3_uri}")
+    # Handle s3:// format
+    if s3_uri.startswith('s3://'):
+        parts = s3_uri[5:].split('/', 1)
+        if len(parts) != 2:
+            raise ValueError(f"Invalid S3 URI format: {s3_uri}")
+        return parts[0], parts[1]
     
-    parts = s3_uri[5:].split('/', 1)
-    if len(parts) != 2:
-        raise ValueError(f"Invalid S3 URI format: {s3_uri}")
+    # Handle https:// format
+    if s3_uri.startswith('https://'):
+        # Pattern 1: https://s3.region.amazonaws.com/bucket/key
+        pattern1 = r'https://s3[.-]([^.]+)\.amazonaws\.com/([^/]+)/(.+)'
+        match = re.match(pattern1, s3_uri)
+        if match:
+            return match.group(2), match.group(3)
+        
+        # Pattern 2: https://bucket.s3.region.amazonaws.com/key
+        pattern2 = r'https://([^.]+)\.s3[.-]([^.]+)\.amazonaws\.com/(.+)'
+        match = re.match(pattern2, s3_uri)
+        if match:
+            return match.group(1), match.group(3)
     
-    return parts[0], parts[1]
+    raise ValueError(f"Invalid S3 URI: {s3_uri}")
