@@ -117,6 +117,9 @@ class DocumentGenerator:
         start_time = datetime.now()
         logger.info(f"Starting document generation for execution {execution_id}")
         
+        # Set logging folder for LLM client
+        self.llm.set_logging_folder(f"/tmp/ai-techne/academy/{execution_id}")
+        
         try:
             # Load and parse transcription
             transcription_data = self._load_transcription(transcription_s3_uri)
@@ -327,6 +330,9 @@ class DocumentGenerator:
         logger.info("Stage 2: Extracting technical content")
         start_time = datetime.now()
         
+        # Set stage context for logging
+        self.llm.set_stage_context("stage-2")
+        
         prompt = create_xml_prompt(
             task="Você é um Especialista em Documentação Técnica de Software. Analise a transcrição fornecida e extraia conteúdo técnico.",
             instructions="""Ignore diálogos sociais. Concentre-se exclusivamente no conteúdo técnico e extraia:
@@ -400,6 +406,9 @@ class DocumentGenerator:
         logger.info("Stage 3: Mapping solutions")
         start_time = datetime.now()
         
+        # Set stage context for logging
+        self.llm.set_stage_context("stage-3")
+        
         prompt = create_xml_prompt(
             task="Você é um Engenheiro de Software Sênior. Crie um mapeamento entre problemas e soluções.",
             instructions="""Com base no conteúdo técnico extraído, crie uma matriz problema-solução:
@@ -466,6 +475,9 @@ class DocumentGenerator:
         """
         logger.info("Stage 4: Structuring document")
         start_time = datetime.now()
+        
+        # Set stage context for logging
+        self.llm.set_stage_context("stage-4")
         
         prompt = create_xml_prompt(
             task="Você é um Designer Instrucional Técnico. Crie a estrutura para um Guia de Treinamento e Troubleshooting.",
@@ -544,6 +556,9 @@ class DocumentGenerator:
         """
         logger.info("Stage 5: Writing document content")
         start_time = datetime.now()
+        
+        # Set stage context for logging
+        self.llm.set_stage_context("stage-5")
         
         prompt = create_xml_prompt(
             task="Atue como um Redator Técnico Sênior. Escreva um Documento de Treinamento e Troubleshooting completo em Markdown.",

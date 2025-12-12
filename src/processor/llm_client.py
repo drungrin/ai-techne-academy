@@ -9,15 +9,15 @@ Author: AI Techne Academy
 Version: 1.1.0
 """
 
-import time
-import logging
-from typing import Optional, Callable, Dict, Any, List
-from dataclasses import dataclass
 import json
+import logging
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional, Callable, Dict, Any, List
 
+from langchain.schema import HumanMessage, SystemMessage
 from langchain_aws import ChatBedrock
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema import HumanMessage, SystemMessage, AIMessage
 
 from circuit_breaker import BedrockCircuitBreaker, CircuitBreakerOpen
 
@@ -188,10 +188,86 @@ class BedrockLLMClient:
         # Track usage
         self.total_usage = TokenUsage(input_tokens=0, output_tokens=0)
         
+        # Logging configuration
+        self.logging_folder: Optional[str] = None
+        self.stage_context: Optional[str] = None
+        
         logger.info(
             f"Initialized Bedrock client: {model_id} in {region} "
             f"(circuit_breaker={'enabled' if enable_circuit_breaker else 'disabled'})"
         )
+    
+    def set_logging_folder(self, folder_path: str) -> None:
+        """
+        Set the base folder for logging chat interactions.
+        
+        Args:
+            folder_path: Base path for logs (e.g., /tmp/ai-techne/academy/execution-id)
+        """
+        self.logging_folder = folder_path
+        logger.info(f"LLM logging folder set to: {folder_path}")
+    
+    def set_stage_context(self, stage: str) -> None:
+        """
+        Set the current stage context for logging.
+        
+        Args:
+            stage: Stage identifier (e.g., "stage-2", "stage-3")
+        """
+        self.stage_context = stage
+        logger.debug(f"LLM stage context set to: {stage}")
+    
+    def _log_chat_messages(
+        self,
+        prompt: str,
+        system_prompt: Optional[str],
+        response_text: str,
+        error: Optional[str] = None
+    ) -> None:
+        """
+        Log raw chat messages (input and output) to files.
+        
+        Args:
+            prompt: User prompt sent to LLM
+            system_prompt: Optional system prompt
+            response_text: Response received from LLM
+            error: Optional error message if request failed
+        """
+        if not self.logging_folder or not self.stage_context:
+            return
+        
+        try:
+            # Create stage directory
+            stage_dir = Path(self.logging_folder) / self.stage_context
+            stage_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Prepare input content
+            input_content = ""
+            if system_prompt:
+                input_content += f"# System Prompt\n\n{system_prompt}\n\n---\n\n"
+            input_content += f"# User Prompt\n\n{prompt}"
+            
+            # Write input
+            input_file = stage_dir / "chat_input.md"
+            with open(input_file, 'w', encoding='utf-8') as f:
+                f.write(input_content)
+            
+            # Prepare output content
+            output_content = ""
+            if error:
+                output_content = f"# ERROR\n\n{error}\n\n---\n\n# Partial Response (if any)\n\n{response_text}"
+            else:
+                output_content = f"# Response\n\n{response_text}"
+            
+            # Write output
+            output_file = stage_dir / "chat_output.md"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(output_content)
+            
+            logger.info(f"Chat messages logged to {stage_dir}")
+            
+        except Exception as e:
+            logger.warning(f"Failed to log chat messages: {str(e)}")
     
     def invoke(
         self,
@@ -284,6 +360,9 @@ class BedrockLLMClient:
                     f"{usage.total_tokens} tokens, ${usage.calculate_cost():.4f}"
                 )
                 
+                # Log the chat interaction
+                self._log_chat_messages(prompt, system_prompt, response_text)
+                
                 # Restore temperature
                 if temperature is not None:
                     self.model.model_kwargs["temperature"] = original_temp
@@ -309,6 +388,15 @@ class BedrockLLMClient:
                     time.sleep(sleep_time)
                 else:
                     logger.error(f"All retries failed: {str(e)}")
+        
+        # Log the failed attempt with error
+        if last_exception:
+            self._log_chat_messages(
+                prompt,
+                system_prompt,
+                response_text="",
+                error=str(last_exception)
+            )
         
         # Restore temperature
         if temperature is not None:
