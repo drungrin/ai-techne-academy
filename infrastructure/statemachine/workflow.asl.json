@@ -188,7 +188,6 @@
       },
       "ResultPath": "$.processor_result",
       "TimeoutSeconds": 14400,
-      "HeartbeatSeconds": 300,
       "Retry": [
         {
           "ErrorEquals": [
