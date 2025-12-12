@@ -34,6 +34,7 @@ WORKDIR /app
 COPY --from=builder /root/.local /root/.local
 
 # Copy application code
+COPY circuit_breaker.py .
 COPY transcription_parser.py .
 COPY llm_client.py .
 COPY document_generator.py .
