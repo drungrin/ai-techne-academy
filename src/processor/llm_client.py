@@ -135,7 +135,7 @@ class BedrockLLMClient:
         Initialize Bedrock client.
         
         Args:
-            model_id: Bedrock model identifier
+            model_id: Bedrock model identifier (or inference profile ARN)
             region: AWS region
             temperature: Sampling temperature (0-1)
             max_tokens: Maximum tokens in response
@@ -151,14 +151,27 @@ class BedrockLLMClient:
         self.max_tokens = max_tokens
         self.max_retries = max_retries
         
+        # Convert model ID to inference profile ARN if needed
+        # Claude Sonnet 4 requires cross-region inference profile
+        if model_id == "anthropic.claude-sonnet-4-5-20250929-v1:0":
+            # Use cross-region inference profile for Claude Sonnet 4
+            inference_profile = f"us.{model_id}"
+            logger.info(f"Converting model ID to inference profile: {inference_profile}")
+        elif model_id.startswith("arn:"):
+            # Already an ARN
+            inference_profile = model_id
+        else:
+            # Use as-is for other models
+            inference_profile = model_id
+        
         # Initialize LangChain ChatBedrock
+        # Note: Claude Sonnet 4 doesn't allow both temperature and top_p
         self.model = ChatBedrock(
-            model_id=model_id,
+            model_id=inference_profile,
             region_name=region,
             model_kwargs={
                 "temperature": temperature,
                 "max_tokens": max_tokens,
-                "top_p": top_p,
                 "top_k": top_k
             }
         )
